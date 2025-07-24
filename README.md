@@ -42,6 +42,15 @@ A command-line interface for managing the Stone-Age.io IoT platform. Flint provi
 - ✅ Pagination support with transparent offset/limit handling
 - ✅ Rich error handling with actionable suggestions
 
+## Recent Polish Improvements ✅
+
+**Completed Improvements:**
+- ✅ Fixed collections command help display (now shows usage instead of full help)
+- ✅ Standardized error message formatting across the entire codebase
+- ✅ Consistent error message style (lowercase start, no periods, proper wrapping)
+- ✅ Enhanced user experience with cleaner error messages
+- ✅ Improved CLI behavior to match standard conventions
+
 ## Installation
 
 ```bash
@@ -408,19 +417,19 @@ Error: collection 'invalid_collection' not available in current context. Availab
 
 # Record not found
 $ flint collections users get invalid_id
-Error: The requested resource was not found. It may have been deleted or you may not have access to it.
-Suggestion: Verify the resource exists and that you have access to it.
+Error: the requested resource was not found. It may have been deleted or you may not have access to it.
+Suggestion: verify the resource exists and that you have access to it.
 ```
 
 ### Authentication Errors
 ```bash
 # Session expired
 $ flint collections edges list
-Error: Your session has expired. Please authenticate again using 'flint auth pb'.
+Error: your session has expired. Please authenticate again using 'flint auth pb'.
 
 # Organization access denied
 $ flint collections organizations list
-Error: You don't have permission to access resources in this organization. Please verify your organization membership or contact your administrator.
+Error: you don't have permission to access resources in this organization. Please verify your organization membership or contact your administrator.
 ```
 
 ### Validation Errors
@@ -431,9 +440,9 @@ Error: invalid JSON format: invalid character 'i' looking for beginning of value
 
 # Missing required fields
 $ flint collections users create '{}'
-Error: Validation failed:
-  - Email address is required
-  - Password is required
+Error: validation failed:
+  - email address is required
+  - password is required
 ```
 
 ## Architecture
@@ -448,12 +457,12 @@ flint/
 ├── internal/
 │   ├── config/            # Context and configuration management
 │   ├── pocketbase/        # PocketBase client and operations
-│   ├── resolver/          # Partial command matching logic
+│   ├── resolver/          # Partial command matching logic  
 │   └── utils/             # Shared utilities
 └── main.go               # Application entry point
 ```
 
-## Development
+## Development Status
 
 ### Phase 1 Completion Checklist ✅
 
@@ -491,13 +500,30 @@ flint/
 - [x] Comprehensive error handling with actionable suggestions
 - [x] Delete confirmations with record details and warnings
 
-### Next Steps (Phase 4)
+### Polish Improvements Checklist ✅
+
+- [x] Fixed collections command help display (shows usage instead of full help)
+- [x] Standardized error message formatting across codebase
+- [x] Consistent error message style (lowercase, no periods, proper format)
+- [x] Enhanced user experience with cleaner error messages
+- [x] Improved CLI behavior following standard conventions
+
+### Next Steps (Phase 4) - NATS Integration 
 
 - [ ] NATS client integration with multiple auth methods
 - [ ] NATS publish/subscribe operations  
 - [ ] Real-time message streaming to stdout
 - [ ] Connection management and error handling
 - [ ] Integration with Stone-Age.io topic structure
+
+### Phase 5 (Future) - File Operations & Final Polish
+
+- [ ] Generic file operations for any collection field
+- [ ] File upload/download with progress indicators
+- [ ] Comprehensive testing suite
+- [ ] Complete documentation and usage examples
+- [ ] Automated builds and GitHub Actions
+- [ ] Version information and update checking
 
 ## Contributing
 
@@ -508,6 +534,7 @@ flint/
 5. Test all partial command matching scenarios
 6. Ensure proper error handling with user-friendly messages
 7. Validate all JSON inputs and provide helpful error messages
+8. Maintain consistent error message formatting
 
 ## License
 
