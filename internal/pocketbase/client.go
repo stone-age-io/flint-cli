@@ -3,6 +3,7 @@ package pocketbase
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -166,10 +167,10 @@ func (c *Client) ListRecords(collection string, options *ListOptions) (*RecordsL
 			req.SetQueryParam("sort", options.Sort)
 		}
 		if len(options.Fields) > 0 {
-			req.SetQueryParam("fields", fmt.Sprintf("%v", options.Fields))
+			req.SetQueryParam("fields", strings.Join(options.Fields, ","))
 		}
 		if len(options.Expand) > 0 {
-			req.SetQueryParam("expand", fmt.Sprintf("%v", options.Expand))
+			req.SetQueryParam("expand", strings.Join(options.Expand, ","))
 		}
 	}
 	
@@ -202,7 +203,7 @@ func (c *Client) GetRecord(collection, id string, expand []string) (map[string]i
 	
 	req := c.httpClient.R()
 	if len(expand) > 0 {
-		req.SetQueryParam("expand", fmt.Sprintf("%v", expand))
+		req.SetQueryParam("expand", strings.Join(expand, ","))
 	}
 	
 	url := fmt.Sprintf("%s/api/%s", c.baseURL, endpoint)

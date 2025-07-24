@@ -12,6 +12,27 @@ import (
 	"flint-cli/internal/resolver"
 )
 
+// Global flag variables
+var (
+	// List flags
+	offsetFlag int
+	limitFlag  int
+	filterFlag string
+	sortFlag   string
+	fieldsFlag []string
+	expandFlag []string
+	
+	// Create/Update flags
+	fileFlag string
+	
+	// Delete flags
+	forceFlag bool
+	quietFlag bool
+	
+	// Common flags
+	outputFlag string
+)
+
 // CollectionsCmd represents the collections command
 var CollectionsCmd = &cobra.Command{
 	Use:   "collections <collection> <action> [args]",
@@ -32,24 +53,30 @@ Examples:
   # List all edges in your organization
   flint collections edges list
 
-  # Get a specific user by ID
-  flint collections users get user_abc123def456
+  # List with filtering and custom fields
+  flint collections edges list --filter 'active=true && region="us-west"' --fields name,code,region
 
-  # Create a new organization
+  # Get a specific user by ID with expanded relations
+  flint collections users get user_abc123def456 --expand organizations
+
+  # Create a new organization from JSON
   flint collections organizations create '{"name":"My Organization","code":"myorg"}'
 
-  # Update an edge device
-  flint collections edges update edge_123 '{"name":"Updated Edge Name"}'
+  # Create from file
+  flint collections edges create --file edge-config.json
 
-  # Delete a thing
-  flint collections things delete thing_456
+  # Update an edge device
+  flint collections edges update edge_123 '{"name":"Updated Edge Name"}' --output table
+
+  # Delete a thing with confirmation skip
+  flint collections things delete thing_456 --force
 
 Available Actions:
-  list     List records from a collection
-  get      Get a single record by ID  
-  create   Create a new record
-  update   Update an existing record
-  delete   Delete a record
+  list     List records from a collection with filtering and pagination
+  get      Get a single record by ID with optional expansion
+  create   Create a new record from JSON data or file
+  update   Update an existing record with JSON data or file
+  delete   Delete a record with confirmation
 
 Available Collections (depends on your context):
   organizations    Multi-tenant organization management
@@ -101,8 +128,24 @@ var (
 )
 
 func init() {
-	// Note: We no longer add action subcommands directly to CollectionsCmd
-	// Instead, we handle routing in the main command
+	// Register all possible flags for collections commands
+	// List-specific flags
+	CollectionsCmd.Flags().IntVar(&offsetFlag, "offset", 0, "Number of records to skip (for pagination)")
+	CollectionsCmd.Flags().IntVar(&limitFlag, "limit", 30, "Maximum number of records to return")
+	CollectionsCmd.Flags().StringVar(&filterFlag, "filter", "", "PocketBase filter expression (e.g., 'active=true && name~\"test\"')")
+	CollectionsCmd.Flags().StringVar(&sortFlag, "sort", "", "Sort expression (e.g., 'name', '-created', 'name,-updated')")
+	CollectionsCmd.Flags().StringSliceVar(&fieldsFlag, "fields", nil, "Specific fields to return (comma-separated)")
+	CollectionsCmd.Flags().StringSliceVar(&expandFlag, "expand", nil, "Relations to expand (comma-separated)")
+	
+	// Create/Update flags
+	CollectionsCmd.Flags().StringVar(&fileFlag, "file", "", "Path to JSON file containing record data")
+	
+	// Delete flags
+	CollectionsCmd.Flags().BoolVarP(&forceFlag, "force", "f", false, "Skip confirmation prompt")
+	CollectionsCmd.Flags().BoolVarP(&quietFlag, "quiet", "q", false, "Suppress success messages")
+	
+	// Common flags
+	CollectionsCmd.Flags().StringVarP(&outputFlag, "output", "o", "", "Output format (json|yaml|table)")
 }
 
 // SetConfigManager sets the configuration manager for the collections commands

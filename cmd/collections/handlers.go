@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/spf13/pflag"
 	"flint-cli/internal/config"
 	"flint-cli/internal/pocketbase"
 	"flint-cli/internal/utils"
@@ -15,32 +14,23 @@ import (
 
 // handleListAction handles the list action for a collection
 func handleListAction(ctx *config.Context, collection string, args []string) error {
-	// Parse flags manually since we're not using Cobra subcommands
-	flags := pflag.NewFlagSet("list", pflag.ContinueOnError)
-	
-	offset := flags.Int("offset", 0, "Number of records to skip (for pagination)")
-	limit := flags.Int("limit", 30, "Maximum number of records to return")
-	filter := flags.String("filter", "", "PocketBase filter expression")
-	sort := flags.String("sort", "", "Sort expression (e.g., 'name', '-created')")
-	fields := flags.StringSlice("fields", nil, "Specific fields to return (comma-separated)")
-	expand := flags.StringSlice("expand", nil, "Relations to expand (comma-separated)")
-	output := flags.StringP("output", "o", "", "Output format (json|yaml|table)")
-	
-	if err := flags.Parse(args); err != nil {
-		return fmt.Errorf("invalid flags: %w", err)
+	// Use global flags instead of manual parsing
+	// Note: args are any remaining positional arguments (none expected for list)
+	if len(args) > 0 {
+		return fmt.Errorf("list action does not accept positional arguments, use flags instead")
 	}
 
 	// Create PocketBase client
 	client := createPocketBaseClient(ctx)
 
-	// Build list options
+	// Build list options from global flags
 	options := &pocketbase.ListOptions{
-		Page:    calculatePage(*offset, *limit),
-		PerPage: *limit,
-		Filter:  *filter,
-		Sort:    *sort,
-		Fields:  *fields,
-		Expand:  *expand,
+		Page:    calculatePage(offsetFlag, limitFlag),
+		PerPage: limitFlag,
+		Filter:  filterFlag,
+		Sort:    sortFlag,
+		Fields:  fieldsFlag,
+		Expand:  expandFlag,
 	}
 
 	// Validate pagination parameters
@@ -48,7 +38,8 @@ func handleListAction(ctx *config.Context, collection string, args []string) err
 		return fmt.Errorf("invalid pagination options: %w", err)
 	}
 
-	utils.PrintDebug(fmt.Sprintf("Listing records from collection '%s' with options: %+v", collection, options))
+	utils.PrintDebug(fmt.Sprintf("Listing records from collection '%s' with options: page=%d, perPage=%d, filter='%s', sort='%s', fields=%v, expand=%v", 
+		collection, options.Page, options.PerPage, options.Filter, options.Sort, options.Fields, options.Expand))
 
 	// List records from PocketBase
 	result, err := client.ListRecords(collection, options)
@@ -64,7 +55,7 @@ func handleListAction(ctx *config.Context, collection string, args []string) err
 	}
 
 	// Display results based on output format
-	outputFormat := *output
+	outputFormat := outputFlag
 	if outputFormat == "" {
 		outputFormat = config.Global.OutputFormat
 	}
@@ -83,23 +74,12 @@ func handleListAction(ctx *config.Context, collection string, args []string) err
 
 // handleGetAction handles the get action for a collection
 func handleGetAction(ctx *config.Context, collection string, args []string) error {
-	// Parse flags manually
-	flags := pflag.NewFlagSet("get", pflag.ContinueOnError)
-	
-	expand := flags.StringSlice("expand", nil, "Relations to expand (comma-separated)")
-	output := flags.StringP("output", "o", "", "Output format (json|yaml|table)")
-	
-	if err := flags.Parse(args); err != nil {
-		return fmt.Errorf("invalid flags: %w", err)
-	}
-
-	// Get remaining args (should be record ID)
-	remainingArgs := flags.Args()
-	if len(remainingArgs) != 1 {
+	// Expect exactly one positional argument (record ID)
+	if len(args) != 1 {
 		return fmt.Errorf("get requires exactly one record ID argument")
 	}
 	
-	recordID := remainingArgs[0]
+	recordID := args[0]
 
 	// Basic validation - just check that ID is not empty
 	// Let PocketBase handle format validation since IDs are configurable
@@ -110,10 +90,10 @@ func handleGetAction(ctx *config.Context, collection string, args []string) erro
 	// Create PocketBase client
 	client := createPocketBaseClient(ctx)
 
-	utils.PrintDebug(fmt.Sprintf("Getting record '%s' from collection '%s'", recordID, collection))
+	utils.PrintDebug(fmt.Sprintf("Getting record '%s' from collection '%s' with expand=%v", recordID, collection, expandFlag))
 
 	// Get record from PocketBase
-	record, err := client.GetRecord(collection, recordID, *expand)
+	record, err := client.GetRecord(collection, recordID, expandFlag)
 	if err != nil {
 		if pbErr, ok := err.(*pocketbase.PocketBaseError); ok {
 			utils.PrintError(fmt.Errorf("%s", pbErr.GetFriendlyMessage()))
@@ -126,7 +106,7 @@ func handleGetAction(ctx *config.Context, collection string, args []string) erro
 	}
 
 	// Display result based on output format
-	outputFormat := *output
+	outputFormat := outputFlag
 	if outputFormat == "" {
 		outputFormat = config.Global.OutputFormat
 	}
@@ -145,25 +125,14 @@ func handleGetAction(ctx *config.Context, collection string, args []string) erro
 
 // handleCreateAction handles the create action for a collection
 func handleCreateAction(ctx *config.Context, collection string, args []string) error {
-	// Parse flags manually
-	flags := pflag.NewFlagSet("create", pflag.ContinueOnError)
-	
-	file := flags.String("file", "", "Path to JSON file containing record data")
-	output := flags.StringP("output", "o", "", "Output format (json|yaml|table)")
-	
-	if err := flags.Parse(args); err != nil {
-		return fmt.Errorf("invalid flags: %w", err)
-	}
-
-	// Get remaining args (should be JSON data if not using file)
-	remainingArgs := flags.Args()
+	// Get JSON data from positional argument or file flag
 	var jsonData string
-	if len(remainingArgs) > 0 {
-		jsonData = remainingArgs[0]
+	if len(args) > 0 {
+		jsonData = args[0]
 	}
 
 	// Parse JSON input from string or file
-	data, err := parseJSONInput(jsonData, *file)
+	data, err := parseJSONInput(jsonData, fileFlag)
 	if err != nil {
 		return fmt.Errorf("invalid JSON input: %w", err)
 	}
@@ -211,7 +180,7 @@ func handleCreateAction(ctx *config.Context, collection string, args []string) e
 	}
 
 	// Display result based on output format
-	outputFormat := *output
+	outputFormat := outputFlag
 	if outputFormat == "" {
 		outputFormat = config.Global.OutputFormat
 	}
@@ -231,26 +200,15 @@ func handleCreateAction(ctx *config.Context, collection string, args []string) e
 
 // handleUpdateAction handles the update action for a collection
 func handleUpdateAction(ctx *config.Context, collection string, args []string) error {
-	// Parse flags manually
-	flags := pflag.NewFlagSet("update", pflag.ContinueOnError)
-	
-	file := flags.String("file", "", "Path to JSON file containing update data")
-	output := flags.StringP("output", "o", "", "Output format (json|yaml|table)")
-	
-	if err := flags.Parse(args); err != nil {
-		return fmt.Errorf("invalid flags: %w", err)
-	}
-
-	// Get remaining args (should be record ID and optionally JSON data)
-	remainingArgs := flags.Args()
-	if len(remainingArgs) < 1 {
+	// Expect at least record ID, optionally JSON data
+	if len(args) < 1 {
 		return fmt.Errorf("update requires a record ID argument")
 	}
 	
-	recordID := remainingArgs[0]
+	recordID := args[0]
 	var jsonData string
-	if len(remainingArgs) > 1 {
-		jsonData = remainingArgs[1]
+	if len(args) > 1 {
+		jsonData = args[1]
 	}
 
 	// Basic validation - just check that ID is not empty
@@ -260,7 +218,7 @@ func handleUpdateAction(ctx *config.Context, collection string, args []string) e
 	}
 
 	// Parse JSON input from string or file
-	data, err := parseJSONInput(jsonData, *file)
+	data, err := parseJSONInput(jsonData, fileFlag)
 	if err != nil {
 		return fmt.Errorf("invalid JSON input: %w", err)
 	}
@@ -307,7 +265,7 @@ func handleUpdateAction(ctx *config.Context, collection string, args []string) e
 	}
 
 	// Display result based on output format
-	outputFormat := *output
+	outputFormat := outputFlag
 	if outputFormat == "" {
 		outputFormat = config.Global.OutputFormat
 	}
@@ -327,23 +285,12 @@ func handleUpdateAction(ctx *config.Context, collection string, args []string) e
 
 // handleDeleteAction handles the delete action for a collection
 func handleDeleteAction(ctx *config.Context, collection string, args []string) error {
-	// Parse flags manually
-	flags := pflag.NewFlagSet("delete", pflag.ContinueOnError)
-	
-	force := flags.BoolP("force", "f", false, "Skip confirmation prompt")
-	quiet := flags.BoolP("quiet", "q", false, "Suppress success messages")
-	
-	if err := flags.Parse(args); err != nil {
-		return fmt.Errorf("invalid flags: %w", err)
-	}
-
-	// Get remaining args (should be record ID)
-	remainingArgs := flags.Args()
-	if len(remainingArgs) != 1 {
+	// Expect exactly one positional argument (record ID)
+	if len(args) != 1 {
 		return fmt.Errorf("delete requires exactly one record ID argument")
 	}
 	
-	recordID := remainingArgs[0]
+	recordID := args[0]
 
 	// Basic validation - just check that ID is not empty
 	// Let PocketBase handle format validation since IDs are configurable
@@ -356,7 +303,7 @@ func handleDeleteAction(ctx *config.Context, collection string, args []string) e
 
 	// Get record details for confirmation (unless forced)
 	var record map[string]interface{}
-	if !*force {
+	if !forceFlag {
 		utils.PrintDebug(fmt.Sprintf("Fetching record details for confirmation: %s", recordID))
 		
 		var err error
@@ -394,7 +341,7 @@ func handleDeleteAction(ctx *config.Context, collection string, args []string) e
 	}
 
 	// Display success message (unless quiet mode)
-	if !*quiet {
+	if !quietFlag {
 		green := color.New(color.FgGreen).SprintFunc()
 		fmt.Printf("%s Record deleted successfully!\n", green("✓"))
 		fmt.Printf("  Record ID: %s\n", recordID)
