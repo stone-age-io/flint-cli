@@ -170,13 +170,13 @@ Examples:
 		// Show available next steps
 		fmt.Printf("\nNext steps:\n")
 		fmt.Printf("  View your profile: %s\n", 
-			color.New(color.FgCyan).Sprint("flint collections get users $(flint context show --output json | jq -r '.pocketbase.auth_record.id')"))
+			color.New(color.FgCyan).Sprint("flint collections users get $(flint context show --output json | jq -r '.pocketbase.auth_record.id')"))
 		
 		if pbOrgID != "" {
 			fmt.Printf("  List organization resources: %s\n", 
-				color.New(color.FgCyan).Sprint("flint collections list edges"))
+				color.New(color.FgCyan).Sprint("flint collections edges list"))
 			fmt.Printf("  View organization details: %s\n", 
-				color.New(color.FgCyan).Sprintf("flint collections get organizations %s", pbOrgID))
+				color.New(color.FgCyan).Sprintf("flint collections organizations get %s", pbOrgID))
 		}
 
 		if pbCollection == config.AuthCollectionUsers && pbOrgID == "" {
@@ -261,13 +261,18 @@ func handleUserOrganization(client *pocketbase.Client, authResp *pocketbase.Auth
 
 	// If user belongs to only one organization, use it automatically
 	if len(orgs) == 1 {
-		orgID := orgs[0]["id"].(string)
-		orgName := ""
-		if name, ok := orgs[0]["name"].(string); ok {
-			orgName = name
+		orgID := getOrganizationID(orgs[0])
+		if orgID == "" {
+			utils.PrintDebug("First organization has no ID field")
+			return "", nil
 		}
 		
-		utils.PrintInfo(fmt.Sprintf("Automatically selected organization: %s (%s)", orgName, orgID))
+		orgName := getOrganizationName(orgs[0])
+		if orgName != "" {
+			utils.PrintInfo(fmt.Sprintf("Automatically selected organization: %s (%s)", orgName, orgID))
+		} else {
+			utils.PrintInfo(fmt.Sprintf("Automatically selected organization: %s", orgID))
+		}
 		return orgID, nil
 	}
 
@@ -286,12 +291,14 @@ func handleUserOrganization(client *pocketbase.Client, authResp *pocketbase.Auth
 	// Prompt user to select organization
 	fmt.Printf("\nYou belong to multiple organizations:\n")
 	for i, org := range orgs {
-		orgID := org["id"].(string)
-		orgName := ""
-		if name, ok := org["name"].(string); ok {
-			orgName = name
+		orgID := getOrganizationID(org)
+		orgName := getOrganizationName(org)
+		
+		if orgName != "" {
+			fmt.Printf("  %d. %s (%s)\n", i+1, orgName, orgID)
+		} else {
+			fmt.Printf("  %d. %s\n", i+1, orgID)
 		}
-		fmt.Printf("  %d. %s (%s)\n", i+1, orgName, orgID)
 	}
 
 	fmt.Printf("\nSelect organization (1-%d), or press Enter to set later: ", len(orgs))
@@ -315,9 +322,25 @@ func handleUserOrganization(client *pocketbase.Client, authResp *pocketbase.Auth
 	}
 
 	selectedOrg := orgs[selection-1]
-	orgID := selectedOrg["id"].(string)
+	orgID := getOrganizationID(selectedOrg)
 	
 	return orgID, nil
+}
+
+// getOrganizationID extracts organization ID from organization data
+func getOrganizationID(org map[string]interface{}) string {
+	if orgID, ok := org["id"].(string); ok {
+		return orgID
+	}
+	return ""
+}
+
+// getOrganizationName extracts organization name from organization data
+func getOrganizationName(org map[string]interface{}) string {
+	if orgName, ok := org["name"].(string); ok {
+		return orgName
+	}
+	return ""
 }
 
 // getRecordDisplayName returns a human-readable display name for a record

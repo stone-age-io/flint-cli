@@ -53,7 +53,9 @@ Examples:
 			green("✓"), cyan(contextName))
 
 		// Show context details
+		contextDir := configManager.GetContextDir(contextName)
 		fmt.Printf("\nContext Details:\n")
+		fmt.Printf("  Directory: %s\n", contextDir)
 		fmt.Printf("  PocketBase URL: %s\n", ctx.PocketBase.URL)
 		fmt.Printf("  Auth Collection: %s\n", ctx.PocketBase.AuthCollection)
 		

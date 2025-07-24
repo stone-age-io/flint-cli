@@ -14,6 +14,22 @@ var ContextCmd = &cobra.Command{
 	Long: `Context management allows you to work with multiple Stone-Age.io environments.
 Each context contains PocketBase configuration, NATS settings, and organization information.
 
+Each context is stored in its own directory within the flint configuration directory,
+containing the context configuration file and any related files like NATS credentials.
+
+Context Directory Structure:
+  ~/.config/flint/
+  ├── config.yaml           # Global configuration
+  ├── production/           # Production context directory
+  │   ├── context.yaml     # Context configuration
+  │   └── nats.creds       # NATS credentials (if using creds auth)
+  ├── development/          # Development context directory
+  │   ├── context.yaml
+  │   └── nats.creds
+  └── staging/              # Staging context directory
+      ├── context.yaml
+      └── nats.creds
+
 Examples:
   flint context create production --pb-url https://api.stone-age.io
   flint context select production

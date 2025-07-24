@@ -26,6 +26,10 @@ A context contains all the connection information needed to work with a specific
 Stone-Age.io deployment including PocketBase URL, authentication settings,
 NATS server information, and organization details.
 
+The context will be created as a directory containing:
+- context.yaml: Main context configuration
+- nats.creds: NATS credentials file (when using creds auth method)
+
 Examples:
   flint context create production \\
     --pb-url https://api.stone-age.io \\
@@ -92,8 +96,15 @@ Examples:
 		}
 
 		// Check if context already exists
-		if _, err := configManager.LoadContext(contextName); err == nil {
+		if configManager.ContextExists(contextName) {
 			return fmt.Errorf("context '%s' already exists", contextName)
+		}
+
+		// Determine NATS credentials file path based on auth method
+		var credsFilePath string
+		if natsAuthMethod == config.NATSAuthCreds {
+			// Use relative path for creds file in the new structure
+			credsFilePath = "./nats.creds"
 		}
 
 		// Create new context configuration
@@ -108,12 +119,13 @@ Examples:
 			NATS: config.NATSConfig{
 				Servers:    natsServers,
 				AuthMethod: natsAuthMethod,
-				TLSEnabled: true,  // Default to secure
-				TLSVerify:  true,  // Default to verified
+				CredsFile:  credsFilePath, // Relative path to context directory
+				TLSEnabled: true,          // Default to secure
+				TLSVerify:  true,          // Default to verified
 			},
 		}
 
-		// Save the context
+		// Save the context (this will create the directory structure)
 		if err := configManager.SaveContext(newContext); err != nil {
 			return fmt.Errorf("failed to save context: %w", err)
 		}
@@ -122,6 +134,10 @@ Examples:
 		green := color.New(color.FgGreen).SprintFunc()
 		fmt.Printf("%s Context '%s' created successfully\n", 
 			green("✓"), contextName)
+
+		// Show context directory information
+		contextDir := configManager.GetContextDir(contextName)
+		fmt.Printf("\nContext directory: %s\n", contextDir)
 
 		// Show configuration summary
 		fmt.Printf("\nContext Configuration:\n")
@@ -134,6 +150,23 @@ Examples:
 		fmt.Printf("  NATS Servers: %s\n", strings.Join(natsServers, ", "))
 		fmt.Printf("  NATS Auth Method: %s\n", natsAuthMethod)
 
+		// Show auth method specific information
+		switch natsAuthMethod {
+		case config.NATSAuthCreds:
+			credsPath := configManager.GetContextCredsPath(contextName)
+			fmt.Printf("  NATS Creds File: %s\n", credsPath)
+			fmt.Printf("\n%s Place your NATS credentials file at: %s\n", 
+				color.New(color.FgYellow).Sprint("Note:"), credsPath)
+		case config.NATSAuthUserPass:
+			fmt.Printf("\n%s Configure NATS username/password using: %s\n",
+				color.New(color.FgYellow).Sprint("Note:"),
+				color.New(color.FgCyan).Sprint("flint auth nats"))
+		case config.NATSAuthToken:
+			fmt.Printf("\n%s Configure NATS token using: %s\n",
+				color.New(color.FgYellow).Sprint("Note:"),
+				color.New(color.FgCyan).Sprint("flint auth nats"))
+		}
+
 		// Suggest next steps
 		fmt.Printf("\nNext steps:\n")
 		fmt.Printf("  1. Select this context: %s\n", 
@@ -143,6 +176,10 @@ Examples:
 		if organizationID == "" {
 			fmt.Printf("  3. Set organization: %s\n", 
 				color.New(color.FgCyan).Sprint("flint context organization <org_id>"))
+		}
+		if natsAuthMethod != config.NATSAuthCreds {
+			fmt.Printf("  4. Configure NATS authentication: %s\n",
+				color.New(color.FgCyan).Sprint("flint auth nats"))
 		}
 
 		return nil

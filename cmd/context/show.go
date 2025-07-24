@@ -21,6 +21,9 @@ var showCmd = &cobra.Command{
 If no context name is provided, shows the currently active context.
 The output format can be controlled with the --output flag.
 
+The context information includes the directory location, configuration details,
+and paths to related files like NATS credentials.
+
 Examples:
   flint context show                    # Show active context
   flint context show production         # Show specific context
@@ -96,7 +99,7 @@ Examples:
 
 		case "table", "":
 			// Default table format
-			showContextTable(ctx, isActive)
+			showContextTable(ctx, isActive, configManager)
 
 		default:
 			return fmt.Errorf("invalid output format '%s'. Valid formats: json, yaml, table", 
@@ -107,7 +110,7 @@ Examples:
 	},
 }
 
-func showContextTable(ctx *config.Context, isActive bool) {
+func showContextTable(ctx *config.Context, isActive bool, configManager *config.Manager) {
 	green := color.New(color.FgGreen).SprintFunc()
 	yellow := color.New(color.FgYellow).SprintFunc()
 	cyan := color.New(color.FgCyan).SprintFunc()
@@ -120,6 +123,10 @@ func showContextTable(ctx *config.Context, isActive bool) {
 	}
 	fmt.Println()
 	fmt.Println(strings.Repeat("=", 50))
+
+	// Show context directory
+	contextDir := configManager.GetContextDir(ctx.Name)
+	fmt.Printf("Context Directory: %s\n\n", contextDir)
 
 	// PocketBase Configuration
 	fmt.Printf("%s\n", bold("PocketBase Configuration:"))
@@ -183,7 +190,15 @@ func showContextTable(ctx *config.Context, isActive bool) {
 
 	case config.NATSAuthCreds:
 		if ctx.NATS.CredsFile != "" {
-			fmt.Printf("  Credentials File:   %s\n", ctx.NATS.CredsFile)
+			// Show absolute path for display, even though stored as relative
+			var displayPath string
+			if strings.HasPrefix(ctx.NATS.CredsFile, "./") {
+				// Convert relative path to absolute for display
+				displayPath = configManager.GetContextCredsPath(ctx.Name)
+			} else {
+				displayPath = ctx.NATS.CredsFile
+			}
+			fmt.Printf("  Credentials File:   %s\n", displayPath)
 		} else {
 			fmt.Printf("  Credentials File:   %s\n", yellow("Not Set"))
 		}

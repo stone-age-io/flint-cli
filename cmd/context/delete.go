@@ -13,12 +13,13 @@ import (
 var forceDelete bool
 
 var deleteCmd = &cobra.Command{
-	Use:   "delete <n>",
+	Use:   "delete <name>",
 	Short: "Delete a Stone-Age.io context",
 	Long: `Delete a context configuration from the system.
 
-This action is irreversible and will remove all configuration data
-for the specified context including authentication tokens and settings.
+This action is irreversible and will remove the entire context directory
+including the context configuration, NATS credentials files, and any other
+context-specific files.
 
 If the context being deleted is currently active, you will need to
 select a different context or create a new one.
@@ -61,8 +62,11 @@ Examples:
 		yellow := color.New(color.FgYellow).SprintFunc()
 		bold := color.New(color.Bold).SprintFunc()
 
+		contextDir := configManager.GetContextDir(contextName)
+
 		fmt.Printf("%s Context to be deleted: %s\n", 
 			red("⚠"), bold(contextName))
+		fmt.Printf("  Directory: %s\n", contextDir)
 		fmt.Printf("  PocketBase URL: %s\n", ctx.PocketBase.URL)
 		fmt.Printf("  Organization ID: %s\n", ctx.PocketBase.OrganizationID)
 		fmt.Printf("  NATS Servers: %v\n", ctx.NATS.Servers)
@@ -73,7 +77,7 @@ Examples:
 
 		// Confirmation prompt (unless --force is used)
 		if !forceDelete {
-			fmt.Printf("\n%s This action cannot be undone.\n", 
+			fmt.Printf("\n%s This will permanently delete the entire context directory and all its contents.\n", 
 				yellow("Warning:"))
 			fmt.Print("Are you sure you want to delete this context? (y/N): ")
 
@@ -90,7 +94,7 @@ Examples:
 			}
 		}
 
-		// Delete the context
+		// Delete the context (removes entire directory)
 		if err := configManager.DeleteContext(contextName); err != nil {
 			return fmt.Errorf("failed to delete context: %w", err)
 		}
@@ -106,7 +110,7 @@ Examples:
 
 		// Success message
 		green := color.New(color.FgGreen).SprintFunc()
-		fmt.Printf("%s Context '%s' deleted successfully\n", 
+		fmt.Printf("%s Context '%s' and its directory deleted successfully\n", 
 			green("✓"), contextName)
 
 		// Show next steps if needed
@@ -121,7 +125,7 @@ Examples:
 			} else {
 				fmt.Printf("\nCreate a new context:\n")
 				fmt.Printf("  %s\n", 
-					color.New(color.FgCyan).Sprint("flint context create <n> --pb-url <url> --nats-servers <servers>"))
+					color.New(color.FgCyan).Sprint("flint context create <name> --pb-url <url> --nats-servers <servers>"))
 			}
 		}
 

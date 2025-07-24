@@ -100,8 +100,10 @@ Note: You must be authenticated with PocketBase before setting an organization.`
 			green("✓"), cyan(organizationID), cyan(ctx.Name))
 
 		// Show updated context summary
+		contextDir := configManager.GetContextDir(ctx.Name)
 		fmt.Printf("\nContext Summary:\n")
 		fmt.Printf("  Context: %s\n", ctx.Name)
+		fmt.Printf("  Directory: %s\n", contextDir)
 		fmt.Printf("  PocketBase URL: %s\n", ctx.PocketBase.URL)
 		fmt.Printf("  Organization ID: %s\n", organizationID)
 		fmt.Printf("  Auth Collection: %s\n", ctx.PocketBase.AuthCollection)

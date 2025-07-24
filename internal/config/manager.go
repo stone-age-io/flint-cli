@@ -11,24 +11,21 @@ import (
 
 // Manager handles configuration and context management
 type Manager struct {
-	configDir   string
-	contextsDir string
+	configDir string
 }
 
 // NewManager creates a new configuration manager
 func NewManager() (*Manager, error) {
 	// Create XDG-compliant config directory
 	configDir := filepath.Join(xdg.ConfigHome, "flint")
-	contextsDir := filepath.Join(configDir, "contexts")
 
-	// Ensure directories exist
-	if err := os.MkdirAll(contextsDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create config directories: %w", err)
+	// Ensure main config directory exists
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create config directory: %w", err)
 	}
 
 	return &Manager{
-		configDir:   configDir,
-		contextsDir: contextsDir,
+		configDir: configDir,
 	}, nil
 }
 
@@ -37,19 +34,19 @@ func (m *Manager) GetConfigDir() string {
 	return m.configDir
 }
 
-// GetContextsDir returns the contexts directory path
-func (m *Manager) GetContextsDir() string {
-	return m.contextsDir
-}
-
 // GetGlobalConfigPath returns the path to the global config file
 func (m *Manager) GetGlobalConfigPath() string {
 	return filepath.Join(m.configDir, "config.yaml")
 }
 
-// GetContextPath returns the path to a specific context file
+// GetContextDir returns the directory path for a specific context
+func (m *Manager) GetContextDir(name string) string {
+	return filepath.Join(m.configDir, name)
+}
+
+// GetContextPath returns the path to a specific context configuration file
 func (m *Manager) GetContextPath(name string) string {
-	return filepath.Join(m.contextsDir, fmt.Sprintf("%s.yaml", name))
+	return filepath.Join(m.GetContextDir(name), "context.yaml")
 }
 
 // LoadGlobalConfig loads the global configuration
@@ -133,6 +130,13 @@ func (m *Manager) SaveContext(context *Context) error {
 		return fmt.Errorf("context name cannot be empty")
 	}
 
+	// Create context directory if it doesn't exist
+	contextDir := m.GetContextDir(context.Name)
+	if err := os.MkdirAll(contextDir, 0755); err != nil {
+		return fmt.Errorf("failed to create context directory: %w", err)
+	}
+
+	// Save context configuration
 	contextPath := m.GetContextPath(context.Name)
 	
 	data, err := yaml.Marshal(context)
@@ -149,36 +153,44 @@ func (m *Manager) SaveContext(context *Context) error {
 
 // ListContexts returns all available context names
 func (m *Manager) ListContexts() ([]string, error) {
-	files, err := os.ReadDir(m.contextsDir)
+	// Read all directories in the config directory
+	entries, err := os.ReadDir(m.configDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read contexts directory: %w", err)
+		return nil, fmt.Errorf("failed to read config directory: %w", err)
 	}
 
 	var contexts []string
-	for _, file := range files {
-		if !file.IsDir() && filepath.Ext(file.Name()) == ".yaml" {
-			name := file.Name()[:len(file.Name())-5] // Remove .yaml extension
-			contexts = append(contexts, name)
+	for _, entry := range entries {
+		// Skip files and check only directories
+		if !entry.IsDir() {
+			continue
+		}
+
+		// Check if the directory contains a context.yaml file
+		contextPath := filepath.Join(m.configDir, entry.Name(), "context.yaml")
+		if _, err := os.Stat(contextPath); err == nil {
+			contexts = append(contexts, entry.Name())
 		}
 	}
 
 	return contexts, nil
 }
 
-// DeleteContext removes a context configuration
+// DeleteContext removes a context configuration and its directory
 func (m *Manager) DeleteContext(name string) error {
 	if name == "" {
 		return fmt.Errorf("context name cannot be empty")
 	}
 
-	contextPath := m.GetContextPath(name)
+	contextDir := m.GetContextDir(name)
 	
-	if _, err := os.Stat(contextPath); os.IsNotExist(err) {
+	if _, err := os.Stat(contextDir); os.IsNotExist(err) {
 		return fmt.Errorf("context '%s' not found", name)
 	}
 
-	if err := os.Remove(contextPath); err != nil {
-		return fmt.Errorf("failed to delete context file: %w", err)
+	// Remove the entire context directory
+	if err := os.RemoveAll(contextDir); err != nil {
+		return fmt.Errorf("failed to delete context directory: %w", err)
 	}
 
 	return nil
@@ -213,4 +225,16 @@ func (m *Manager) SetActiveContext(name string) error {
 	globalConfig.ActiveContext = name
 
 	return m.SaveGlobalConfig(globalConfig)
+}
+
+// GetContextCredsPath returns the path to the NATS credentials file for a context
+func (m *Manager) GetContextCredsPath(name string) string {
+	return filepath.Join(m.GetContextDir(name), "nats.creds")
+}
+
+// ContextExists checks if a context exists
+func (m *Manager) ContextExists(name string) bool {
+	contextPath := m.GetContextPath(name)
+	_, err := os.Stat(contextPath)
+	return err == nil
 }

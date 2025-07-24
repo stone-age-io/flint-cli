@@ -18,6 +18,9 @@ var listCmd = &cobra.Command{
 
 The currently active context is highlighted with an asterisk (*).
 
+Each context is stored in its own directory within the flint configuration directory,
+containing the context configuration file and any related files like NATS credentials.
+
 Examples:
   flint context list
   flint context ls`,
@@ -34,7 +37,7 @@ Examples:
 		}
 
 		if len(contexts) == 0 {
-			fmt.Println("No contexts configured.")
+			fmt.Printf("No contexts configured in %s.\n", configManager.GetConfigDir())
 			fmt.Printf("\nCreate your first context:\n  %s\n", 
 				color.New(color.FgCyan).Sprint("flint context create <n> --pb-url <url> --nats-servers <servers>"))
 			return nil
@@ -100,7 +103,7 @@ func displayContextsTable(contextNames []string, activeContext string) {
 		})
 	}
 
-	fmt.Println("Stone-Age.io Contexts:")
+	fmt.Printf("Stone-Age.io Contexts (stored in %s):\n", configManager.GetConfigDir())
 	table.Render()
 }
 

@@ -42,14 +42,15 @@ A command-line interface for managing the Stone-Age.io IoT platform. Flint provi
 - ✅ Pagination support with transparent offset/limit handling
 - ✅ Rich error handling with actionable suggestions
 
-## Recent Polish Improvements ✅
+## Recent Context Structure Updates ✅
 
 **Completed Improvements:**
-- ✅ Fixed collections command help display (now shows usage instead of full help)
-- ✅ Standardized error message formatting across the entire codebase
-- ✅ Consistent error message style (lowercase start, no periods, proper wrapping)
-- ✅ Enhanced user experience with cleaner error messages
-- ✅ Improved CLI behavior to match standard conventions
+- ✅ Updated context storage to use directory-based structure
+- ✅ Each context now has its own directory with context.yaml and related files
+- ✅ NATS credentials files stored within context directories
+- ✅ Relative path support for context-specific files
+- ✅ Enhanced context display showing directory locations
+- ✅ Improved context management with self-contained configurations
 
 ## Installation
 
@@ -80,11 +81,15 @@ flint context create production \
   --nats-servers nats://nats1.stone-age.io:4222,nats://nats2.stone-age.io:4222 \
   --nats-auth-method creds
 
-# Create a development context
+# This creates ~/.config/flint/production/ directory with context.yaml
+
+# Create a development context  
 flint context create development \
   --pb-url http://localhost:8090 \
   --nats-servers nats://localhost:4222 \
   --nats-auth-method user_pass
+
+# This creates ~/.config/flint/development/ directory with context.yaml
 ```
 
 ### 2. Select Active Context
@@ -145,15 +150,20 @@ flint collections locations delete loc_abc123def456
 
 ## Configuration
 
-Flint uses XDG-compliant configuration directories:
+Flint uses XDG-compliant configuration directories with a context-based structure:
 
 ```
 ~/.config/flint/
 ├── config.yaml           # Global configuration
-└── contexts/             # Context configurations
-    ├── production.yaml
-    ├── development.yaml
-    └── staging.yaml
+├── production/           # Production context directory
+│   ├── context.yaml     # Context configuration
+│   └── nats.creds       # NATS credentials (if using creds auth)
+├── development/          # Development context directory
+│   ├── context.yaml
+│   └── nats.creds
+└── staging/              # Staging context directory
+    ├── context.yaml
+    └── nats.creds
 ```
 
 ### Global Configuration (`~/.config/flint/config.yaml`)
@@ -167,7 +177,7 @@ organization_display: true
 debug: false
 ```
 
-### Context Configuration (`~/.config/flint/contexts/production.yaml`)
+### Context Configuration (`~/.config/flint/production/context.yaml`)
 
 ```yaml
 name: production
@@ -191,7 +201,7 @@ nats:
     - nats://nats1.stone-age.io:4222
     - nats://nats2.stone-age.io:4222
   auth_method: creds       # user_pass|token|creds
-  creds_file: ~/.config/flint/nats/production.creds
+  creds_file: ./nats.creds # Relative path to context directory
   username: ""
   password: ""
   token: ""
@@ -205,19 +215,19 @@ nats:
 
 ```bash
 # Create new context
-flint context create <name> [flags]
+flint context create <n> [flags]
 
 # List all contexts
 flint context list
 
 # Select active context
-flint context select <name>
+flint context select <n>
 
 # Show context details
-flint context show [name]
+flint context show [n]
 
 # Delete context
-flint context delete <name>
+flint context delete <n>
 
 # Set organization for current context
 flint context organization <org_id>
@@ -334,6 +344,25 @@ Flint supports all Stone-Age.io collections with full CRUD operations:
 - `service_users` - System service accounts
 
 ## Examples
+
+### Context Management Workflows
+
+```bash
+# Create contexts for different environments
+flint context create production --pb-url https://api.stone-age.io --nats-servers nats://nats.stone-age.io:4222
+flint context create development --pb-url http://localhost:8090 --nats-servers nats://localhost:4222
+
+# Switch between contexts
+flint context select production
+flint context select development
+
+# View context details and directory structure
+flint context show production
+flint context list
+
+# Set organization for current context
+flint context organization org_abc123def456789
+```
 
 ### Collection Management Workflows
 
@@ -500,13 +529,17 @@ flint/
 - [x] Comprehensive error handling with actionable suggestions
 - [x] Delete confirmations with record details and warnings
 
-### Polish Improvements Checklist ✅
+### Context Structure Updates Checklist ✅
 
-- [x] Fixed collections command help display (shows usage instead of full help)
-- [x] Standardized error message formatting across codebase
-- [x] Consistent error message style (lowercase, no periods, proper format)
-- [x] Enhanced user experience with cleaner error messages
-- [x] Improved CLI behavior following standard conventions
+- [x] Updated configuration manager for directory-based contexts
+- [x] Each context stored in its own directory (e.g., ~/.config/flint/production/)
+- [x] Context configuration stored as context.yaml within each directory
+- [x] NATS credentials files stored within context directories
+- [x] Relative path support for context-specific files
+- [x] Updated all context commands (create, list, select, show, delete, organization)
+- [x] Enhanced context display with directory locations
+- [x] Improved context deletion to remove entire directories
+- [x] Updated documentation to reflect new structure
 
 ### Next Steps (Phase 4) - NATS Integration 
 
