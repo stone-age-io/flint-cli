@@ -99,20 +99,12 @@ func ValidateCollectionName(collection string) error {
 		collection, strings.Join(validCollections, ", "))
 }
 
-// ValidateOrganizationID validates an organization ID format
+// ValidateOrganizationID validates an organization ID
+// Note: This only validates that the ID is not empty - PocketBase handles format validation
+// since organization IDs can be configured to use different formats (UUIDv4, UUIDv7, custom, etc.)
 func ValidateOrganizationID(orgID string) error {
-	if orgID == "" {
+	if strings.TrimSpace(orgID) == "" {
 		return fmt.Errorf("organization ID cannot be empty")
-	}
-
-	// Stone-Age.io organization IDs should be 15 characters, alphanumeric
-	if len(orgID) != 15 {
-		return fmt.Errorf("organization ID must be exactly 15 characters")
-	}
-
-	validID := regexp.MustCompile(`^[a-z0-9]+$`)
-	if !validID.MatchString(orgID) {
-		return fmt.Errorf("organization ID can only contain lowercase letters and numbers")
 	}
 
 	return nil

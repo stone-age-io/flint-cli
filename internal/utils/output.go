@@ -193,3 +193,11 @@ func FormatDuration(seconds int64) string {
 	minutes := (seconds % 3600) / 60
 	return fmt.Sprintf("%dh %dm", hours, minutes)
 }
+
+// TitleCase converts a string to title case (first letter uppercase)
+func TitleCase(s string) string {
+	if s == "" {
+		return s
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
+}

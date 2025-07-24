@@ -46,7 +46,7 @@ func (r *CommandResolver) initializeCommands() {
 		"organization",
 	}
 
-	// Collections subcommands  
+	// Collections subcommands (actions - collection names are validated separately)
 	r.commands["collections"] = []string{
 		"list",
 		"get",
@@ -74,7 +74,7 @@ func (r *CommandResolver) initializeCommands() {
 		"download",
 	}
 
-	// Stone-Age.io collections for collections command
+	// Stone-Age.io collections for reference (used for validation in collections commands)
 	r.commands["stone_collections"] = []string{
 		"organizations",
 		"users",
@@ -170,6 +170,28 @@ func (r *CommandResolver) ValidateCommand(category, command string) bool {
 	}
 
 	return false
+}
+
+// ValidateCollection checks if a collection name is valid (exact match required)
+func (r *CommandResolver) ValidateCollection(collection string, availableCollections []string) error {
+	if collection == "" {
+		return fmt.Errorf("collection name is required")
+	}
+
+	// Check against available collections from context
+	for _, available := range availableCollections {
+		if collection == available {
+			return nil
+		}
+	}
+
+	// Collection not found - provide helpful error with suggestions
+	if len(availableCollections) > 0 {
+		return fmt.Errorf("collection '%s' not available in current context. Available collections: %s", 
+			collection, strings.Join(availableCollections, ", "))
+	}
+
+	return fmt.Errorf("collection '%s' not found and no collections available in current context", collection)
 }
 
 // GetMinimumPrefix returns the minimum unambiguous prefix for a command

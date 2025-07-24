@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"flint-cli/cmd/auth"
+	"flint-cli/cmd/collections"
 	"flint-cli/cmd/context"
 	"flint-cli/internal/config"
 	"flint-cli/internal/resolver"
@@ -43,9 +44,11 @@ Features:
 		// Initialize command resolver for partial matching
 		cmdResolver = resolver.NewCommandResolver()
 
-		// Pass config manager to command groups
+		// Pass config manager and resolver to command groups
 		context.SetConfigManager(configManager)
 		auth.SetConfigManager(configManager)
+		collections.SetConfigManager(configManager)
+		collections.SetCommandResolver(cmdResolver)
 
 		return nil
 	},
@@ -81,6 +84,9 @@ func addCommands() {
 	
 	// Authentication commands
 	rootCmd.AddCommand(auth.AuthCmd)
+	
+	// Collections CRUD commands
+	rootCmd.AddCommand(collections.CollectionsCmd)
 }
 
 // initConfig reads in config file and ENV variables if set.

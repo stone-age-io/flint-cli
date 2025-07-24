@@ -28,6 +28,20 @@ A command-line interface for managing the Stone-Age.io IoT platform. Flint provi
 - ✅ Automatic organization selection and validation
 - ✅ Session expiration handling and recovery
 
+## Phase 3 Implementation Status ✅
+
+**Completed Features:**
+- ✅ Complete CRUD operations for all Stone-Age.io collections
+- ✅ Collection validation against context's available collections
+- ✅ Action partial matching (list, get, create, update, delete)
+- ✅ JSON input support with file loading capability
+- ✅ Organization-scoped operations (automatic via PocketBase rules)
+- ✅ Comprehensive validation for create/update operations
+- ✅ Collection-specific field validation and warnings
+- ✅ Multiple output formats with collection-aware table display
+- ✅ Pagination support with transparent offset/limit handling
+- ✅ Rich error handling with actionable suggestions
+
 ## Installation
 
 ```bash
@@ -99,6 +113,25 @@ flint context organization org_abc123def456789
 
 # Or set during authentication
 flint auth pb --email admin@company.com --organization org_abc123def456789
+```
+
+### 5. Manage Collections
+
+```bash
+# List all edges in your organization
+flint collections edges list
+
+# Get a specific user by ID
+flint collections users get user_abc123def456
+
+# Create a new edge device
+flint collections edges create '{"name":"Building-A-Edge","code":"bldg-a","type":"controller","region":"west"}'
+
+# Update an existing thing
+flint collections things update thing_123456789 '{"name":"Updated Thing Name","active":true}'
+
+# Delete a location (with confirmation)
+flint collections locations delete loc_abc123def456
 ```
 
 ## Configuration
@@ -181,24 +214,73 @@ flint context delete <name>
 flint context organization <org_id>
 ```
 
+### Authentication
+
+```bash
+# PocketBase authentication
+flint auth pb [flags]
+  --email string         Email address for authentication
+  --password string      Password for authentication
+  --collection string    Authentication collection (users|clients|edges|things|service_users)
+  --organization string  Organization ID to set after authentication
+```
+
+### Collections Operations
+
+```bash
+# List records from a collection
+flint collections <collection> list [flags]
+  --offset int           Number of records to skip (default: 0)
+  --limit int            Maximum number of records to return (default: 30)
+  --filter string        PocketBase filter expression
+  --sort string          Sort expression (e.g., 'name', '-created')
+  --fields strings       Specific fields to return (comma-separated)
+  --expand strings       Relations to expand (comma-separated)
+  --output string        Output format (json|yaml|table)
+
+# Get a single record by ID
+flint collections <collection> get <record_id> [flags]
+  --expand strings       Relations to expand (comma-separated)
+  --output string        Output format (json|yaml|table)
+
+# Create a new record
+flint collections <collection> create [json_data] [flags]
+  --file string          Path to JSON file containing record data
+  --output string        Output format (json|yaml|table)
+
+# Update an existing record
+flint collections <collection> update <record_id> [json_data] [flags]
+  --file string          Path to JSON file containing update data
+  --output string        Output format (json|yaml|table)
+
+# Delete a record
+flint collections <collection> delete <record_id> [flags]
+  --force                Skip confirmation prompt
+  --quiet                Suppress success messages
+```
+
 ### Partial Command Matching
 
 Flint supports Cisco-style partial command matching:
 
 ```bash
 # These are all equivalent:
-flint context list
-flint con list
-flint cont l
-flint context ls
+flint collections edges list
+flint col edges list
+flint collections edges ls
+flint col edg l
+
+# But collection names must be exact:
+flint collections edges list    # ✓ Correct
+flint collections edg list      # ✗ Invalid - collection name must be exact
 
 # Ambiguous commands will show suggestions:
-flint con c
+flint collections edges c
 # Error: ambiguous command 'c'. Possible matches: create
 
 # Unknown commands show available options:
-flint context xyz
-# Error: unknown command 'xyz'. Available commands: create, list, select, show, delete, organization
+flint collections edges xyz
+# Error: unknown command 'xyz'. Available commands: create, delete, get, list, update
 ```
 
 ### Global Flags
@@ -211,20 +293,11 @@ flint context xyz
 
 ## Stone-Age.io Collections
 
-Flint is aware of all Stone-Age.io collections and supports authentication with multiple entity types:
+Flint supports all Stone-Age.io collections with full CRUD operations:
 
-### Authentication Collections
+### Core Collections
 
-**Supported Auth Collections:**
-- `users` (default) - Human administrators with organization membership
-- `clients` - NATS client authentication entities  
-- `edges` - Edge device authentication
-- `things` - Individual IoT device authentication
-- `service_users` - System service accounts
-
-### Collection Types
-
-**Core Collections:**
+**Available Collections:**
 - `organizations` - Multi-tenant organization management
 - `users` - Human administrators with organization membership
 - `edges` - Edge computing nodes managing local IoT devices
@@ -242,40 +315,125 @@ Flint is aware of all Stone-Age.io collections and supports authentication with 
 - `audit_logs` - System audit trail (read-only)
 - `topic_permissions` - NATS topic access control
 
+### Authentication Collections
+
+**Supported Auth Collections:**
+- `users` (default) - Human administrators with organization membership
+- `clients` - NATS client authentication entities  
+- `edges` - Edge device authentication
+- `things` - Individual IoT device authentication
+- `service_users` - System service accounts
+
+## Examples
+
+### Collection Management Workflows
+
+```bash
+# Organization setup
+flint collections organizations create '{"name":"ACME Corp","code":"acme","account_name":"acme-corp"}'
+flint collections organizations list --filter 'active=true' --output table
+
+# User management
+flint collections users create '{"email":"john@acme.com","password":"secure123","first_name":"John","last_name":"Doe"}'
+flint collections users list --fields email,first_name,last_name,is_org_admin
+flint collections users update user_123456789 '{"is_org_admin":true}'
+
+# Edge device management
+flint collections edges create '{"name":"Building-A-Gateway","code":"bldg-a-gw","type":"gateway","region":"us-west"}'
+flint collections edges list --filter 'region="us-west" && active=true' --sort name
+flint collections edges get edge_abc123def456 --expand organization_id,edge_types
+
+# IoT device management
+flint collections things create '{"name":"Door-Controller-01","code":"door-01","type":"access_control","edge_id":"edge_abc123def456"}'
+flint collections things list --filter 'edge_id="edge_abc123def456"' --expand edge_id
+flint collections things update thing_123456789 '{"location_id":"loc_conference_room_a"}'
+
+# Location hierarchy
+flint collections locations create '{"name":"Building A","type":"building","code":"bldg-a"}'
+flint collections locations create '{"name":"Floor 1","type":"floor","code":"bldg-a-f1","parent_id":"loc_building_a"}'
+flint collections locations list --filter 'type="room"' --sort path
+
+# Bulk operations with files
+echo '{"name":"Test Edge","code":"test-edge","type":"controller","region":"test"}' > edge.json
+flint collections edges create --file edge.json
+
+# Advanced filtering and pagination
+flint collections edges list --filter 'active=true && region~"us-"' --sort '-created' --limit 10
+flint collections users list --offset 30 --limit 10 --fields email,first_name,last_name
+```
+
+### JSON File Examples
+
+**Create Edge (edge.json):**
+```json
+{
+  "name": "Production Gateway",
+  "code": "prod-gw-01",
+  "type": "gateway",
+  "region": "us-east",
+  "description": "Primary gateway for east coast operations"
+}
+```
+
+**Update User (user-update.json):**
+```json
+{
+  "first_name": "Jane",
+  "last_name": "Smith",
+  "is_org_admin": true,
+  "active": true
+}
+```
+
+**Create Location (location.json):**
+```json
+{
+  "name": "Conference Room A",
+  "type": "room",
+  "code": "conf-room-a",
+  "description": "Main conference room with AV equipment",
+  "parent_id": "loc_floor_1"
+}
+```
+
 ## Error Handling
 
 Flint provides comprehensive error handling with user-friendly messages:
 
+### Collection Errors
+```bash
+# Invalid collection
+$ flint collections invalid_collection list
+Error: collection 'invalid_collection' not available in current context. Available collections: organizations, users, edges, things, locations, clients, edge_types, thing_types, location_types, edge_regions, audit_logs, topic_permissions
+
+# Record not found
+$ flint collections users get invalid_id
+Error: The requested resource was not found. It may have been deleted or you may not have access to it.
+Suggestion: Verify the resource exists and that you have access to it.
+```
+
 ### Authentication Errors
 ```bash
-# Invalid credentials
-Error: Invalid email or password. Please check your credentials and try again.
-Suggestion: Try running 'flint auth pb' to authenticate with PocketBase.
-
 # Session expired
+$ flint collections edges list
 Error: Your session has expired. Please authenticate again using 'flint auth pb'.
 
 # Organization access denied
-Error: You don't have permission to access resources in this organization. 
-Please verify your organization membership or contact your administrator.
-```
-
-### Connection Errors
-```bash
-# Server unreachable
-Error: Connection error. Please check your network connection and the Stone-Age.io server URL.
-
-# Server error
-Error: Stone-Age.io server error. Please try again later or contact support.
+$ flint collections organizations list
+Error: You don't have permission to access resources in this organization. Please verify your organization membership or contact your administrator.
 ```
 
 ### Validation Errors
 ```bash
-# Invalid email format
-Error: invalid email format: invalid email format
+# Invalid JSON
+$ flint collections edges create 'invalid json'
+Error: invalid JSON format: invalid character 'i' looking for beginning of value
 
-# Invalid collection
-Error: invalid auth collection 'invalid'. Valid options: users, clients, edges, things, service_users
+# Missing required fields
+$ flint collections users create '{}'
+Error: Validation failed:
+  - Email address is required
+  - Password is required
 ```
 
 ## Architecture
@@ -285,7 +443,8 @@ flint/
 ├── cmd/                    # Cobra command definitions
 │   ├── root.go            # Root command setup
 │   ├── context/           # Context management commands
-│   └── auth/              # Authentication commands
+│   ├── auth/              # Authentication commands
+│   └── collections/       # Collection CRUD operations
 ├── internal/
 │   ├── config/            # Context and configuration management
 │   ├── pocketbase/        # PocketBase client and operations
@@ -296,7 +455,7 @@ flint/
 
 ## Development
 
-### Phase 1 Completion Checklist
+### Phase 1 Completion Checklist ✅
 
 - [x] Context management with organization support
 - [x] Configuration files properly managed
@@ -307,7 +466,7 @@ flint/
 - [x] Stone-Age.io collection definitions
 - [x] Utility functions for output and validation
 
-### Phase 2 Completion Checklist
+### Phase 2 Completion Checklist ✅
 
 - [x] PocketBase HTTP client implementation
 - [x] Authentication system for multiple collections
@@ -318,13 +477,27 @@ flint/
 - [x] Comprehensive error handling with suggestions
 - [x] Integration with existing context system
 
-### Next Steps (Phase 3)
+### Phase 3 Completion Checklist ✅
 
-- [ ] CRUD operations for all Stone-Age.io collections
-- [ ] Organization-scoped operations working
-- [ ] Filtering, pagination, and formatting
-- [ ] Collection validation and helpers
-- [ ] Batch operations support
+- [x] CRUD operations for all Stone-Age.io collections
+- [x] Organization-scoped operations working
+- [x] Collection validation against context configuration
+- [x] Action partial matching (list, get, create, update, delete)
+- [x] JSON input support with file loading
+- [x] Basic JSON validation before PocketBase calls
+- [x] Filtering, pagination, and multiple output formats
+- [x] Collection-specific validation and field handling
+- [x] Rich table output with collection-aware formatting
+- [x] Comprehensive error handling with actionable suggestions
+- [x] Delete confirmations with record details and warnings
+
+### Next Steps (Phase 4)
+
+- [ ] NATS client integration with multiple auth methods
+- [ ] NATS publish/subscribe operations  
+- [ ] Real-time message streaming to stdout
+- [ ] Connection management and error handling
+- [ ] Integration with Stone-Age.io topic structure
 
 ## Contributing
 
@@ -333,6 +506,8 @@ flint/
 3. Break complex tasks into smaller, manageable functions
 4. Use the established directory structure
 5. Test all partial command matching scenarios
+6. Ensure proper error handling with user-friendly messages
+7. Validate all JSON inputs and provide helpful error messages
 
 ## License
 
