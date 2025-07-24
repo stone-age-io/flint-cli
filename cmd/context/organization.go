@@ -5,6 +5,8 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+	"flint-cli/internal/pocketbase"
+	"flint-cli/internal/utils"
 )
 
 var organizationCmd = &cobra.Command{
@@ -37,19 +39,48 @@ Note: You must be authenticated with PocketBase before setting an organization.`
 			return fmt.Errorf("organization ID cannot be empty")
 		}
 
+		utils.PrintDebug(fmt.Sprintf("Setting organization ID: %s", organizationID))
+
 		// Get the active context
 		ctx, err := configManager.GetActiveContext()
 		if err != nil {
 			return fmt.Errorf("no active context set. Use 'flint context select <n>' to set one")
 		}
 
+		utils.PrintDebug(fmt.Sprintf("Active context: %s", ctx.Name))
+
 		// Check if user is authenticated
 		if ctx.PocketBase.AuthToken == "" {
 			return fmt.Errorf("not authenticated. Run 'flint auth pb' to authenticate first")
 		}
 
-		// TODO: In Phase 2, we would validate that the user belongs to this organization
-		// by making a PocketBase API call. For now, we'll just update the context.
+		// If authenticated, validate organization access with PocketBase
+		if pocketbase.IsAuthValid(ctx) {
+			utils.PrintInfo("Validating organization access...")
+			client := pocketbase.NewClientFromContext(ctx)
+			if err := client.ValidateOrganizationAccess(organizationID); err != nil {
+				if pbErr, ok := err.(*pocketbase.PocketBaseError); ok {
+					utils.PrintError(fmt.Errorf("%s", pbErr.GetFriendlyMessage()))
+					if suggestion := pbErr.GetSuggestion(); suggestion != "" {
+						fmt.Printf("\nSuggestion: %s\n", suggestion)
+					}
+					return fmt.Errorf("organization validation failed")
+				}
+				return fmt.Errorf("organization validation failed: %w", err)
+			}
+			utils.PrintDebug("Organization access validated successfully")
+
+			// Update PocketBase current_organization_id
+			utils.PrintInfo("Updating current organization in PocketBase...")
+			if err := client.UpdateCurrentOrganization(organizationID); err != nil {
+				utils.PrintWarning(fmt.Sprintf("Failed to update current organization in PocketBase: %v", err))
+				// Don't fail the operation for this
+			} else {
+				utils.PrintDebug("PocketBase current organization updated successfully")
+			}
+		} else {
+			utils.PrintWarning("Authentication token expired - organization will be set locally only")
+		}
 
 		// Update the context
 		ctx.PocketBase.OrganizationID = organizationID
@@ -58,6 +89,8 @@ Note: You must be authenticated with PocketBase before setting an organization.`
 		if err := configManager.SaveContext(ctx); err != nil {
 			return fmt.Errorf("failed to save context: %w", err)
 		}
+
+		utils.PrintDebug("Context saved successfully")
 
 		// Success message
 		green := color.New(color.FgGreen).SprintFunc()
@@ -81,12 +114,6 @@ Note: You must be authenticated with PocketBase before setting an organization.`
 			color.New(color.FgCyan).Sprint("flint collections list edges"))
 		fmt.Printf("  Subscribe to messages: %s\n", 
 			color.New(color.FgCyan).Sprint("flint nats subscribe \"telemetry.>\""))
-
-		// Warning about PocketBase current_organization_id update
-		yellow := color.New(color.FgYellow).SprintFunc()
-		fmt.Printf("\n%s Note: This updates your local context only.\n", yellow("⚠"))
-		fmt.Printf("The PocketBase current_organization_id will be updated when you\n")
-		fmt.Printf("make your next authenticated API call.\n")
 
 		return nil
 	},

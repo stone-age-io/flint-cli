@@ -99,26 +99,22 @@ func ValidateCollectionName(collection string) error {
 		collection, strings.Join(validCollections, ", "))
 }
 
-// ValidateOrganizationID validates an organization ID
-// Note: This only validates that the ID is not empty - PocketBase handles format validation
-// since organization IDs can be configured to use different formats (UUIDv4, UUIDv7, custom, etc.)
+// ValidateOrganizationID validates an organization ID format (minimal - PocketBase handles detailed validation)
 func ValidateOrganizationID(orgID string) error {
-	if strings.TrimSpace(orgID) == "" {
+	if orgID == "" {
 		return fmt.Errorf("organization ID cannot be empty")
 	}
-
 	return nil
 }
 
-// ValidateEmail validates an email address format
+// ValidateEmail validates an email address format (minimal - PocketBase handles detailed validation)
 func ValidateEmail(email string) error {
 	if email == "" {
 		return fmt.Errorf("email cannot be empty")
 	}
 
-	// Simple email validation
-	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
-	if !emailRegex.MatchString(email) {
+	// Basic check for @ symbol
+	if !strings.Contains(email, "@") {
 		return fmt.Errorf("invalid email format")
 	}
 

@@ -21,8 +21,8 @@ Examples:
   flint context list
   flint context show production`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Show help if no subcommand provided
-		return cmd.Help()
+		// Show usage instead of full help when no subcommand provided
+		return fmt.Errorf("missing subcommand. See 'flint context --help' for available commands")
 	},
 }
 

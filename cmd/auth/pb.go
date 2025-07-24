@@ -67,7 +67,7 @@ Examples:
 		}
 
 		// Validate collection
-		if err := utils.ValidateAuthCollection(pbCollection); err != nil {
+		if err := config.ValidateAuthCollection(pbCollection); err != nil {
 			return err
 		}
 
@@ -86,9 +86,9 @@ Examples:
 			}
 		}
 
-		// Validate email format
-		if err := utils.ValidateEmail(pbEmail); err != nil {
-			return fmt.Errorf("invalid email format: %w", err)
+		// Basic email validation
+		if pbEmail == "" || !strings.Contains(pbEmail, "@") {
+			return fmt.Errorf("invalid email format")
 		}
 
 		// Create PocketBase client
@@ -224,11 +224,25 @@ func promptForPassword() (string, error) {
 func handleUserOrganization(client *pocketbase.Client, authResp *pocketbase.AuthResponse) (string, error) {
 	// If organization was specified via flag, validate it
 	if pbOrgID != "" {
+		utils.PrintDebug(fmt.Sprintf("Validating specified organization: %s", pbOrgID))
 		if err := client.ValidateOrganizationAccess(pbOrgID); err != nil {
 			return "", fmt.Errorf("organization validation failed: %w", err)
 		}
 		utils.PrintInfo(fmt.Sprintf("Organization '%s' validated successfully", pbOrgID))
 		return pbOrgID, nil
+	}
+
+	// Check if user has a current organization ID set
+	currentOrgID := client.GetCurrentOrganizationID()
+	if currentOrgID != "" {
+		utils.PrintDebug(fmt.Sprintf("Found current organization ID: %s", currentOrgID))
+		// Validate that the user still has access to this organization
+		if err := client.ValidateOrganizationAccess(currentOrgID); err == nil {
+			utils.PrintInfo(fmt.Sprintf("Using existing current organization: %s", currentOrgID))
+			return currentOrgID, nil
+		} else {
+			utils.PrintWarning(fmt.Sprintf("Current organization '%s' is no longer accessible: %v", currentOrgID, err))
+		}
 	}
 
 	// Get user's organizations
@@ -264,6 +278,8 @@ func handleUserOrganization(client *pocketbase.Client, authResp *pocketbase.Auth
 		if err := client.ValidateOrganizationAccess(ctx.PocketBase.OrganizationID); err == nil {
 			utils.PrintInfo(fmt.Sprintf("Using existing organization from context: %s", ctx.PocketBase.OrganizationID))
 			return ctx.PocketBase.OrganizationID, nil
+		} else {
+			utils.PrintDebug(fmt.Sprintf("Context organization '%s' is no longer accessible: %v", ctx.PocketBase.OrganizationID, err))
 		}
 	}
 

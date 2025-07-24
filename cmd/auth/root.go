@@ -34,8 +34,8 @@ Examples:
   # Authenticate with NATS (configured per context)
   flint auth nats --username client001 --password secret`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Show help if no subcommand provided
-		return cmd.Help()
+		// Show usage instead of full help when no subcommand provided
+		return fmt.Errorf("missing subcommand. See 'flint auth --help' for available commands")
 	},
 }
 
@@ -68,7 +68,7 @@ func validateActiveContext() (*config.Context, error) {
 
 	ctx, err := configManager.GetActiveContext()
 	if err != nil {
-		return nil, fmt.Errorf("no active context set. Use 'flint context select <n>' to set one")
+		return nil, fmt.Errorf("no active context set. Use 'flint context select <name>' to set one")
 	}
 
 	return ctx, nil

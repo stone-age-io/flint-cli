@@ -29,7 +29,7 @@ func (c *Client) Authenticate(collection, identity, password string) (*AuthRespo
 		return nil, fmt.Errorf("invalid auth collection: %w", err)
 	}
 
-	// Validate credentials
+	// Basic validation
 	if identity == "" {
 		return nil, fmt.Errorf("identity (email/username) is required")
 	}
@@ -138,43 +138,18 @@ func (c *Client) ValidateOrganizationAccess(organizationID string) error {
 		return fmt.Errorf("no authentication record available")
 	}
 
-	// Check if user has organizations field
-	orgsInterface, exists := authRecord["organizations"]
-	if !exists {
-		return fmt.Errorf("user has no organization memberships")
-	}
+	utils.PrintDebug(fmt.Sprintf("Validating access to organization: %s", organizationID))
 
-	// Handle organizations field (could be array of IDs or objects)
-	var userOrgIDs []string
-	
-	switch orgs := orgsInterface.(type) {
-	case []interface{}:
-		// Array of organization IDs or objects
-		for _, org := range orgs {
-			switch orgData := org.(type) {
-			case string:
-				// Simple ID
-				userOrgIDs = append(userOrgIDs, orgData)
-			case map[string]interface{}:
-				// Organization object with ID
-				if id, ok := orgData["id"].(string); ok {
-					userOrgIDs = append(userOrgIDs, id)
-				}
-			}
-		}
-	case []string:
-		// Array of organization ID strings
-		userOrgIDs = orgs
-	case string:
-		// Single organization ID
-		userOrgIDs = []string{orgs}
-	default:
-		return fmt.Errorf("invalid organizations field format")
+	// Get user organizations to check membership
+	userOrgs, err := c.GetUserOrganizations()
+	if err != nil {
+		return fmt.Errorf("failed to get user organizations: %w", err)
 	}
 
 	// Check if the user belongs to the specified organization
-	for _, orgID := range userOrgIDs {
-		if orgID == organizationID {
+	for _, org := range userOrgs {
+		if orgID, ok := org["id"].(string); ok && orgID == organizationID {
+			utils.PrintDebug(fmt.Sprintf("User has access to organization: %s", organizationID))
 			return nil // User has access
 		}
 	}
@@ -193,24 +168,38 @@ func (c *Client) GetUserOrganizations() ([]map[string]interface{}, error) {
 		return nil, fmt.Errorf("no authentication record available")
 	}
 
+	utils.PrintDebug("Retrieving user organizations")
+
 	// Check if organizations are already expanded in the auth record
-	if orgsInterface, exists := authRecord["organizations"]; exists {
-		if orgs, ok := orgsInterface.([]interface{}); ok {
-			var organizations []map[string]interface{}
-			for _, org := range orgs {
-				if orgMap, ok := org.(map[string]interface{}); ok {
-					organizations = append(organizations, orgMap)
-				}
+	if orgsInterface, exists := authRecord["expand"]; exists {
+		if expandMap, ok := orgsInterface.(map[string]interface{}); ok {
+			if orgData, exists := expandMap["organizations"]; exists {
+				utils.PrintDebug("Found expanded organizations in auth record")
+				return c.parseOrganizationData(orgData)
 			}
-			return organizations, nil
 		}
 	}
 
-	// If not expanded, we need to fetch the user record with organization expansion
+	// Check if organizations field exists in auth record (could be IDs)
+	if orgsInterface, exists := authRecord["organizations"]; exists {
+		utils.PrintDebug("Found organizations field in auth record")
+		// If it's already expanded objects, use them
+		if orgs, err := c.parseOrganizationData(orgsInterface); err == nil && len(orgs) > 0 {
+			// Check if first item has full organization data (not just ID)
+			if firstOrg := orgs[0]; len(firstOrg) > 1 || (len(firstOrg) == 1 && firstOrg["id"] == nil) {
+				utils.PrintDebug("Organizations are already expanded")
+				return orgs, nil
+			}
+		}
+	}
+
+	// Need to fetch the user record with organization expansion
 	userID, ok := authRecord["id"].(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid authentication record: missing user ID")
 	}
+
+	utils.PrintDebug(fmt.Sprintf("Fetching user record with expanded organizations: %s", userID))
 
 	// Get user record with expanded organizations
 	userRecord, err := c.GetRecord("users", userID, []string{"organizations"})
@@ -219,19 +208,62 @@ func (c *Client) GetUserOrganizations() ([]map[string]interface{}, error) {
 	}
 
 	// Extract organizations from the expanded record
-	if orgsInterface, exists := userRecord["expand"].(map[string]interface{})["organizations"]; exists {
-		if orgs, ok := orgsInterface.([]interface{}); ok {
-			var organizations []map[string]interface{}
-			for _, org := range orgs {
-				if orgMap, ok := org.(map[string]interface{}); ok {
-					organizations = append(organizations, orgMap)
-				}
+	if expandInterface, exists := userRecord["expand"]; exists {
+		if expandMap, ok := expandInterface.(map[string]interface{}); ok {
+			if orgsInterface, exists := expandMap["organizations"]; exists {
+				utils.PrintDebug("Found expanded organizations in user record")
+				return c.parseOrganizationData(orgsInterface)
 			}
-			return organizations, nil
 		}
 	}
 
+	utils.PrintDebug("No organizations found for user")
 	return []map[string]interface{}{}, nil
+}
+
+// parseOrganizationData helper function to parse organization data from various formats
+func (c *Client) parseOrganizationData(orgsInterface interface{}) ([]map[string]interface{}, error) {
+	switch orgs := orgsInterface.(type) {
+	case []interface{}:
+		var organizations []map[string]interface{}
+		for _, org := range orgs {
+			if orgMap, ok := org.(map[string]interface{}); ok {
+				organizations = append(organizations, orgMap)
+			}
+		}
+		utils.PrintDebug(fmt.Sprintf("Parsed %d organizations from interface slice", len(organizations)))
+		return organizations, nil
+	case []map[string]interface{}:
+		utils.PrintDebug(fmt.Sprintf("Parsed %d organizations from map slice", len(orgs)))
+		return orgs, nil
+	case map[string]interface{}:
+		// Single organization object
+		utils.PrintDebug("Parsed single organization")
+		return []map[string]interface{}{orgs}, nil
+	default:
+		return nil, fmt.Errorf("invalid organization data format")
+	}
+}
+
+// GetCurrentOrganizationID returns the user's current organization ID from their record
+func (c *Client) GetCurrentOrganizationID() string {
+	if !c.IsAuthenticated() {
+		return ""
+	}
+
+	authRecord := c.GetAuthRecord()
+	if authRecord == nil {
+		return ""
+	}
+
+	// Check for current_organization_id field
+	if currentOrgID, ok := authRecord["current_organization_id"].(string); ok && currentOrgID != "" {
+		utils.PrintDebug(fmt.Sprintf("Found current organization ID in auth record: %s", currentOrgID))
+		return currentOrgID
+	}
+
+	utils.PrintDebug("No current organization ID found in auth record")
+	return ""
 }
 
 // UpdateAuthContextFromResponse updates a context with authentication data
