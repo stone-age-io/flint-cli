@@ -71,7 +71,7 @@ permissions for the target collection.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Need at least collection and action
 		if len(args) < 2 {
-			return cmd.Help()
+			return fmt.Errorf("missing required arguments: <collection> <action>")
 		}
 
 		collection := args[0]
@@ -139,7 +139,7 @@ func validateActiveContext() (*config.Context, error) {
 
 	ctx, err := configManager.GetActiveContext()
 	if err != nil {
-		return nil, fmt.Errorf("no active context set. Use 'flint context select <n>' to set one")
+		return nil, fmt.Errorf("no active context set. Use 'flint context select <name>' to set one")
 	}
 
 	// Check authentication

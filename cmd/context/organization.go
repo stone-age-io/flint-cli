@@ -51,7 +51,7 @@ Note: You must be authenticated with PocketBase before setting an organization.`
 
 		// Check if user is authenticated
 		if ctx.PocketBase.AuthToken == "" {
-			return fmt.Errorf("not authenticated. Run 'flint auth pb' to authenticate first")
+			return fmt.Errorf("authentication required. Run 'flint auth pb' to authenticate first")
 		}
 
 		// If authenticated, validate organization access with PocketBase
