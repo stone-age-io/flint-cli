@@ -1,0 +1,224 @@
+Subscribing to NATS:
+  Subject: moco.>
+  Timeout: 30s
+
+Waiting for messages... (Press Ctrl+C to stop)
+════════════════════════════════════════════════════════════════════════════════
+ℹ NATS connection established to NA2PJ3TENBQG4MQKCNC24GGTF5WHQJKRMI7L47ES363G6QUC4FC47VNK
+ℹ Subscribed to subject: moco.>
+ℹ Press Ctrl+C to stop...
+┌─ Subject: moco.bldg-na-001.controller.ctrl-main-001.status [417 bytes]
+├─ Time: 2025-07-25 05:16:23.789
+├─ Headers:
+│  Nmqtt-Pub: 1
+└─ Data:
+   {
+     "context": {
+       "edge": {
+         "code": "bldg-na-001",
+         "type": "office-building"
+       },
+       "location": {
+         "code": "floor-1-north",
+         "path": "floor-1/north/lobby",
+         "type": "closet"
+       }
+     },
+     "edge_id": "019544ba-6179-7c3c-9983-0d305026ed54",
+     "id": "01984002-d66d-7947-b2c2-a3cb6a73e273",
+     "metadata": {},
+     "payload": {
+       "status": "online"
+     },
+     "thing_id": "019544ba-6179-7cd5-a6ab-09d1ced32608",
+     "ts": "2025-07-25T05:16:24.559Z",
+     "type": "controller.status.heartbeat",
+     "version": 1
+   }
+
+┌─ Subject: moco.bldg-na-001.controller.ctrl-main-001.inputs.3 [414 bytes]
+├─ Time: 2025-07-25 05:16:24.137
+├─ Headers:
+│  Nmqtt-Pub: 1
+└─ Data:
+   {
+     "context": {
+       "edge": {
+         "code": "bldg-na-001",
+         "type": "office-building"
+       },
+       "location": {
+         "code": "floor-1-north",
+         "path": "floor-1/north/lobby",
+         "type": "closet"
+       }
+     },
+     "edge_id": "019544ba-6179-7c3c-9983-0d305026ed54",
+     "id": "01984002-d7ac-72ff-9a44-d9f4521b5f12",
+     "metadata": {},
+     "payload": {
+       "input": 3,
+       "state": 0
+     },
+     "thing_id": "019544ba-6179-7cd5-a6ab-09d1ced32608",
+     "ts": "2025-07-25T05:16:24.903Z",
+     "type": "controller.input.state",
+     "version": 1
+   }
+
+┌─ Subject: moco.bldg-na-001.controller.ctrl-main-001.inputs.1 [414 bytes]
+├─ Time: 2025-07-25 05:16:24.139
+├─ Headers:
+│  Nmqtt-Pub: 1
+└─ Data:
+   {
+     "context": {
+       "edge": {
+         "code": "bldg-na-001",
+         "type": "office-building"
+       },
+       "location": {
+         "code": "floor-1-north",
+         "path": "floor-1/north/lobby",
+         "type": "closet"
+       }
+     },
+     "edge_id": "019544ba-6179-7c3c-9983-0d305026ed54",
+     "id": "01984002-d7a5-75b6-a634-2f2908964e89",
+     "metadata": {},
+     "payload": {
+       "input": 1,
+       "state": 0
+     },
+     "thing_id": "019544ba-6179-7cd5-a6ab-09d1ced32608",
+     "ts": "2025-07-25T05:16:24.904Z",
+     "type": "controller.input.state",
+     "version": 1
+   }
+
+┌─ Subject: moco.bldg-na-001.controller.ctrl-main-001.inputs.7 [414 bytes]
+├─ Time: 2025-07-25 05:16:24.139
+├─ Headers:
+│  Nmqtt-Pub: 1
+└─ Data:
+   {
+     "context": {
+       "edge": {
+         "code": "bldg-na-001",
+         "type": "office-building"
+       },
+       "location": {
+         "code": "floor-1-north",
+         "path": "floor-1/north/lobby",
+         "type": "closet"
+       }
+     },
+     "edge_id": "019544ba-6179-7c3c-9983-0d305026ed54",
+     "id": "01984002-d7c6-799d-b193-95dd1947549d",
+     "metadata": {},
+     "payload": {
+       "input": 7,
+       "state": 0
+     },
+     "thing_id": "019544ba-6179-7cd5-a6ab-09d1ced32608",
+     "ts": "2025-07-25T05:16:24.909Z",
+     "type": "controller.input.state",
+     "version": 1
+   }
+
+┌─ Subject: moco.bldg-na-001.controller.ctrl-main-001.inputs.4 [414 bytes]
+├─ Time: 2025-07-25 05:16:24.139
+├─ Headers:
+│  Nmqtt-Pub: 1
+└─ Data:
+   {
+     "context": {
+       "edge": {
+         "code": "bldg-na-001",
+         "type": "office-building"
+       },
+       "location": {
+         "code": "floor-1-north",
+         "path": "floor-1/north/lobby",
+         "type": "closet"
+       }
+     },
+     "edge_id": "019544ba-6179-7c3c-9983-0d305026ed54",
+     "id": "01984002-d7bf-7c8e-8b37-b535566c05ba",
+     "metadata": {},
+     "payload": {
+       "input": 4,
+       "state": 0
+     },
+     "thing_id": "019544ba-6179-7cd5-a6ab-09d1ced32608",
+     "ts": "2025-07-25T05:16:24.909Z",
+     "type": "controller.input.state",
+     "version": 1
+   }
+
+┌─ Subject: moco.bldg-na-001.controller.ctrl-main-001.inputs.5 [414 bytes]
+├─ Time: 2025-07-25 05:16:24.281
+├─ Headers:
+│  Nmqtt-Pub: 1
+└─ Data:
+   {
+     "context": {
+       "edge": {
+         "code": "bldg-na-001",
+         "type": "office-building"
+       },
+       "location": {
+         "code": "floor-1-north",
+         "path": "floor-1/north/lobby",
+         "type": "closet"
+       }
+     },
+     "edge_id": "019544ba-6179-7c3c-9983-0d305026ed54",
+     "id": "01984002-d7b5-7aaa-9004-8a0ed1b65d0e",
+     "metadata": {},
+     "payload": {
+       "input": 5,
+       "state": 0
+     },
+     "thing_id": "019544ba-6179-7cd5-a6ab-09d1ced32608",
+     "ts": "2025-07-25T05:16:24.909Z",
+     "type": "controller.input.state",
+     "version": 1
+   }
+
+┌─ Subject: moco.bldg-na-001.controller.ctrl-main-001.inputs.8 [414 bytes]
+├─ Time: 2025-07-25 05:16:24.282
+├─ Headers:
+│  Nmqtt-Pub: 1
+└─ Data:
+   {
+     "context": {
+       "edge": {
+         "code": "bldg-na-001",
+         "type": "office-building"
+       },
+       "location": {
+         "code": "floor-1-north",
+         "path": "floor-1/north/lobby",
+         "type": "closet"
+       }
+     },
+     "edge_id": "019544ba-6179-7c3c-9983-0d305026ed54",
+     "id": "01984002-d7ce-74c9-89fa-8971219ff30d",
+     "metadata": {},
+     "payload": {
+       "input": 8,
+       "state": 0
+     },
+     "thing_id": "019544ba-6179-7cd5-a6ab-09d1ced32608",
+     "ts": "2025-07-25T05:16:24.912Z",
+     "type": "controller.input.state",
+     "version": 1
+   }
+
+ℹ Received signal interrupt, stopping subscription...
+
+✓ Subscription completed
+  Subject: moco.>
+  Messages received: 7
+ℹ Received signal interrupt, stopping subscription...
