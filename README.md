@@ -306,24 +306,25 @@ Flint supports all Stone-Age.io collections with full CRUD operations:
 
 ## Partial Command Matching
 
-Flint supports Cisco-style partial command matching:
+Flint supports Cisco-style partial command matching for collection actions only:
 
 ```bash
-# These are all equivalent:
+# Collection actions support partial matching:
 flint collections edges list
-flint col edges list
-flint collections edges ls
-flint col edg l
+flint collections edges l        # "l" resolves to "list" 
+flint collections edges cr       # "cr" resolves to "create"
+flint collections edges up       # "up" resolves to "update"
 
-# Collection names must be exact:
+# Main commands and collection names must be exact:
 flint collections edges list    # ✓ Correct
-flint collections edg list      # ✗ Invalid
+flint col edges list            # ✗ Invalid - "col" not recognized
+flint collections edg list      # ✗ Invalid - collection name must be exact
 
-# Ambiguous commands show suggestions:
+# Ambiguous actions show suggestions:
 flint collections edges c
 # Error: ambiguous command 'c'. Possible matches: create
 
-# Unknown commands show available options:
+# Unknown actions show available options:
 flint collections edges xyz
 # Error: unknown command 'xyz'. Available commands: create, delete, get, list, update
 ```
@@ -504,3 +505,7 @@ The following features are planned for future development:
 6. Ensure proper error handling with user-friendly messages
 7. Validate all JSON inputs and provide helpful error messages
 8. Maintain consistent error message formatting
+
+## License
+
+[Add your license here]
