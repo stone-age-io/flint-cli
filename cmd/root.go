@@ -34,6 +34,10 @@ Features:
 - Partial command matching (Cisco-style)
 - Generic file upload/download operations`,
 	Version: "0.1.0",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// Show usage instead of full help when no subcommand provided
+		return fmt.Errorf("missing subcommand. See 'flint --help' for available commands")
+	},
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// Initialize configuration manager
 		var err error
