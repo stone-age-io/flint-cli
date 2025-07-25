@@ -2,55 +2,15 @@
 
 A command-line interface for managing the Stone-Age.io IoT platform. Flint provides comprehensive tools for context management, PocketBase authentication, collection operations, and NATS messaging.
 
-## Phase 1 Implementation Status ✅
+## Features
 
-**Completed Features:**
-- ✅ Go module initialization with dependencies
-- ✅ Cobra CLI framework with root command
-- ✅ XDG-compliant configuration directory management
-- ✅ Context management system with organization support
-- ✅ YAML configuration file handling
-- ✅ Partial command matching resolver (Cisco-style)
-- ✅ Complete context subcommands (create, list, select, show, delete, organization)
-- ✅ Utility functions for output formatting and validation
-- ✅ Stone-Age.io specific collection definitions
-
-## Phase 2 Implementation Status ✅
-
-**Completed Features:**
-- ✅ PocketBase HTTP client with authentication
-- ✅ Support for multiple auth collections (users, clients, edges, things, service_users)
-- ✅ Persistent session token management
-- ✅ Organization-aware operations with validation
-- ✅ Comprehensive error handling with friendly messages
-- ✅ Stone-Age.io specific error translations
-- ✅ Interactive and non-interactive authentication modes
-- ✅ Automatic organization selection and validation
-- ✅ Session expiration handling and recovery
-
-## Phase 3 Implementation Status ✅
-
-**Completed Features:**
-- ✅ Complete CRUD operations for all Stone-Age.io collections
-- ✅ Collection validation against context's available collections
-- ✅ Action partial matching (list, get, create, update, delete)
-- ✅ JSON input support with file loading capability
-- ✅ Organization-scoped operations (automatic via PocketBase rules)
-- ✅ Comprehensive validation for create/update operations
-- ✅ Collection-specific field validation and warnings
-- ✅ Multiple output formats with collection-aware table display
-- ✅ Pagination support with transparent offset/limit handling
-- ✅ Rich error handling with actionable suggestions
-
-## Recent Context Structure Updates ✅
-
-**Completed Improvements:**
-- ✅ Updated context storage to use directory-based structure
-- ✅ Each context now has its own directory with context.yaml and related files
-- ✅ NATS credentials files stored within context directories
-- ✅ Relative path support for context-specific files
-- ✅ Enhanced context display showing directory locations
-- ✅ Improved context management with self-contained configurations
+- **Multi-environment context management** with organization support and directory-based configuration
+- **PocketBase authentication** supporting multiple collection types (users, clients, edges, things, service_users)  
+- **Complete CRUD operations** for all Stone-Age.io collections with filtering, pagination, and expansion
+- **NATS messaging** with multiple authentication methods (user_pass, token, creds) and full pub/sub functionality
+- **Partial command matching** with Cisco-style abbreviated commands
+- **Comprehensive error handling** with user-friendly messages and suggestions
+- **XDG-compliant configuration** with self-contained context directories
 
 ## Installation
 
@@ -81,76 +41,48 @@ flint context create production \
   --nats-servers nats://nats1.stone-age.io:4222,nats://nats2.stone-age.io:4222 \
   --nats-auth-method creds
 
-# This creates ~/.config/flint/production/ directory with context.yaml
-
 # Create a development context  
 flint context create development \
   --pb-url http://localhost:8090 \
   --nats-servers nats://localhost:4222 \
   --nats-auth-method user_pass
-
-# This creates ~/.config/flint/development/ directory with context.yaml
 ```
 
-### 2. Select Active Context
+### 2. Select Active Context and Authenticate
 
 ```bash
-# List all contexts
-flint context list
-
 # Select the production context
 flint context select production
 
-# View current context details
-flint context show
-```
+# Authenticate with PocketBase
+flint auth pb --email admin@company.com
 
-### 3. Authenticate with PocketBase
-
-```bash
-# Interactive authentication (prompts for credentials)
-flint auth pb
-
-# Authenticate with specific credentials
-flint auth pb --email admin@company.com --password secret
-
-# Authenticate as different entity types
-flint auth pb --collection edges --email edge001@company.com
-flint auth pb --collection clients --email client001@company.com
-```
-
-### 4. Set Organization
-
-```bash
-# Set your organization ID (required for API operations)
+# Set your organization
 flint context organization org_abc123def456789
 
-# Or set during authentication
-flint auth pb --email admin@company.com --organization org_abc123def456789
+# Configure NATS authentication
+flint auth nats --method creds --creds-file /path/to/nats.creds
 ```
 
-### 5. Manage Collections
+### 3. Start Using Collections and Messaging
 
 ```bash
 # List all edges in your organization
 flint collections edges list
 
-# Get a specific user by ID
-flint collections users get user_abc123def456
-
 # Create a new edge device
 flint collections edges create '{"name":"Building-A-Edge","code":"bldg-a","type":"controller","region":"west"}'
 
-# Update an existing thing
-flint collections things update thing_123456789 '{"name":"Updated Thing Name","active":true}'
+# Publish a message via NATS
+flint nats publish "telemetry.edge.edge_123" '{"temperature": 22.5, "timestamp": "2025-01-15T10:30:00Z"}'
 
-# Delete a location (with confirmation)
-flint collections locations delete loc_abc123def456
+# Subscribe to messages
+flint nats subscribe "telemetry.>"
 ```
 
 ## Configuration
 
-Flint uses XDG-compliant configuration directories with a context-based structure:
+Flint uses XDG-compliant configuration directories with a context-based structure where each context has its own directory:
 
 ```
 ~/.config/flint/
@@ -209,25 +141,53 @@ nats:
   tls_verify: true
 ```
 
+### NATS Authentication Methods
+
+**Credentials File (Recommended)**
+```bash
+# Configure with credentials file
+flint auth nats --method creds --creds-file /path/to/client.creds
+
+# Or place file in context directory for automatic relative path
+cp client.creds ~/.config/flint/production/nats.creds
+flint auth nats --method creds --creds-file ./nats.creds
+```
+
+**Username/Password**
+```bash
+# Configure username/password authentication
+flint auth nats --method user_pass --username client001 --password secret
+```
+
+**Token Authentication**
+```bash
+# Configure token authentication
+flint auth nats --method token --token eyJhbGciOiJSUzI1NiIs...
+```
+
 ## Commands
 
 ### Context Management
 
 ```bash
 # Create new context
-flint context create <n> [flags]
+flint context create <name> [flags]
+  --pb-url string              PocketBase URL (required)
+  --pb-auth-collection string  Auth collection (default: "users")
+  --nats-servers strings       NATS server URLs (comma-separated, required)
+  --nats-auth-method string    NATS auth method (user_pass|token|creds)
 
 # List all contexts
 flint context list
 
 # Select active context
-flint context select <n>
+flint context select <name>
 
 # Show context details
-flint context show [n]
+flint context show [name]
 
 # Delete context
-flint context delete <n>
+flint context delete <name>
 
 # Set organization for current context
 flint context organization <org_id>
@@ -242,6 +202,15 @@ flint auth pb [flags]
   --password string      Password for authentication
   --collection string    Authentication collection (users|clients|edges|things|service_users)
   --organization string  Organization ID to set after authentication
+
+# NATS authentication configuration
+flint auth nats [flags]
+  --method string        Authentication method (user_pass|token|creds)
+  --username string      Username for user_pass authentication
+  --password string      Password for user_pass authentication
+  --token string         JWT token for token authentication
+  --creds-file string    Path to JWT credentials file for creds authentication
+  --test                 Test NATS connection after configuration
 ```
 
 ### Collections Operations
@@ -278,28 +247,24 @@ flint collections <collection> delete <record_id> [flags]
   --quiet                Suppress success messages
 ```
 
-### Partial Command Matching
-
-Flint supports Cisco-style partial command matching:
+### NATS Operations
 
 ```bash
-# These are all equivalent:
-flint collections edges list
-flint col edges list
-flint collections edges ls
-flint col edg l
+# Publish a message to a NATS subject
+flint nats publish <subject> [message] [flags]
+  --header strings       Message headers in key=value format (multiple allowed)
+  --reply string         Reply subject for request-response pattern
+  --file string          Read message data from file
+  --json                 Treat message as JSON and add Content-Type header
 
-# But collection names must be exact:
-flint collections edges list    # ✓ Correct
-flint collections edg list      # ✗ Invalid - collection name must be exact
-
-# Ambiguous commands will show suggestions:
-flint collections edges c
-# Error: ambiguous command 'c'. Possible matches: create
-
-# Unknown commands show available options:
-flint collections edges xyz
-# Error: unknown command 'xyz'. Available commands: create, delete, get, list, update
+# Subscribe to messages from a NATS subject
+flint nats subscribe <subject> [flags]
+  --queue string         Queue group name for load-balanced subscription
+  --timeout duration     Subscription timeout (default: unlimited)
+  --count int            Stop after receiving this many messages (0 = unlimited)
+  --raw                  Display raw message data without formatting
+  --headers              Display message headers
+  --timestamp            Display message timestamps
 ```
 
 ### Global Flags
@@ -314,9 +279,7 @@ flint collections edges xyz
 
 Flint supports all Stone-Age.io collections with full CRUD operations:
 
-### Core Collections
-
-**Available Collections:**
+**Core Collections:**
 - `organizations` - Multi-tenant organization management
 - `users` - Human administrators with organization membership
 - `edges` - Edge computing nodes managing local IoT devices
@@ -334,14 +297,36 @@ Flint supports all Stone-Age.io collections with full CRUD operations:
 - `audit_logs` - System audit trail (read-only)
 - `topic_permissions` - NATS topic access control
 
-### Authentication Collections
-
-**Supported Auth Collections:**
-- `users` (default) - Human administrators with organization membership
-- `clients` - NATS client authentication entities  
+**Authentication Collections:**
+- `users` (default) - Human administrators
+- `clients` - NATS client entities  
 - `edges` - Edge device authentication
 - `things` - Individual IoT device authentication
 - `service_users` - System service accounts
+
+## Partial Command Matching
+
+Flint supports Cisco-style partial command matching:
+
+```bash
+# These are all equivalent:
+flint collections edges list
+flint col edges list
+flint collections edges ls
+flint col edg l
+
+# Collection names must be exact:
+flint collections edges list    # ✓ Correct
+flint collections edg list      # ✗ Invalid
+
+# Ambiguous commands show suggestions:
+flint collections edges c
+# Error: ambiguous command 'c'. Possible matches: create
+
+# Unknown commands show available options:
+flint collections edges xyz
+# Error: unknown command 'xyz'. Available commands: create, delete, get, list, update
+```
 
 ## Examples
 
@@ -359,45 +344,65 @@ flint context select development
 # View context details and directory structure
 flint context show production
 flint context list
+```
 
-# Set organization for current context
+### Authentication Workflows
+
+```bash
+# PocketBase authentication with organization setup
+flint auth pb --email admin@company.com --password secret
 flint context organization org_abc123def456789
+
+# NATS authentication configuration
+flint auth nats --method creds --creds-file ./nats.creds --test
+flint auth nats --method user_pass --username client001 --password secret
+flint auth nats --method token --token eyJhbGciOiJSUzI1NiIs...
 ```
 
 ### Collection Management Workflows
 
 ```bash
-# Organization setup
+# Organization and user management
 flint collections organizations create '{"name":"ACME Corp","code":"acme","account_name":"acme-corp"}'
-flint collections organizations list --filter 'active=true' --output table
-
-# User management
 flint collections users create '{"email":"john@acme.com","password":"secure123","first_name":"John","last_name":"Doe"}'
 flint collections users list --fields email,first_name,last_name,is_org_admin
-flint collections users update user_123456789 '{"is_org_admin":true}'
 
-# Edge device management
+# Edge and device management
 flint collections edges create '{"name":"Building-A-Gateway","code":"bldg-a-gw","type":"gateway","region":"us-west"}'
-flint collections edges list --filter 'region="us-west" && active=true' --sort name
-flint collections edges get edge_abc123def456 --expand organization_id,edge_types
-
-# IoT device management
 flint collections things create '{"name":"Door-Controller-01","code":"door-01","type":"access_control","edge_id":"edge_abc123def456"}'
-flint collections things list --filter 'edge_id="edge_abc123def456"' --expand edge_id
-flint collections things update thing_123456789 '{"location_id":"loc_conference_room_a"}'
-
-# Location hierarchy
-flint collections locations create '{"name":"Building A","type":"building","code":"bldg-a"}'
-flint collections locations create '{"name":"Floor 1","type":"floor","code":"bldg-a-f1","parent_id":"loc_building_a"}'
-flint collections locations list --filter 'type="room"' --sort path
-
-# Bulk operations with files
-echo '{"name":"Test Edge","code":"test-edge","type":"controller","region":"test"}' > edge.json
-flint collections edges create --file edge.json
 
 # Advanced filtering and pagination
 flint collections edges list --filter 'active=true && region~"us-"' --sort '-created' --limit 10
-flint collections users list --offset 30 --limit 10 --fields email,first_name,last_name
+flint collections things list --filter 'edge_id="edge_abc123def456"' --expand edge_id
+
+# Using files for create/update operations
+echo '{"name":"Test Edge","code":"test-edge","type":"controller","region":"test"}' > edge.json
+flint collections edges create --file edge.json
+```
+
+### NATS Messaging Workflows
+
+```bash
+# Basic publish and subscribe
+flint nats publish "telemetry.temperature" '{"sensor": "temp001", "value": 22.5}'
+flint nats subscribe "telemetry.>"
+
+# Publishing with headers and metadata
+flint nats publish "system.alerts" '{"level": "warning", "message": "High CPU usage"}' \
+  --header source=monitoring \
+  --header priority=high \
+  --header timestamp=$(date -u +%s)
+
+# Subscribing with queue groups for load balancing
+flint nats subscribe "commands.>" --queue command_processors
+
+# Publishing from files
+echo '{"action": "restart", "component": "edge_service"}' > command.json
+flint nats publish "commands.edge.edge_123" --file command.json --json
+
+# Subscribing with limits and formatting
+flint nats subscribe "events.>" --count 10 --timeout 30s --headers --timestamp
+flint nats subscribe "telemetry.sensors" --raw --output json
 ```
 
 ### JSON File Examples
@@ -413,24 +418,18 @@ flint collections users list --offset 30 --limit 10 --fields email,first_name,la
 }
 ```
 
-**Update User (user-update.json):**
+**NATS Message (telemetry.json):**
 ```json
 {
-  "first_name": "Jane",
-  "last_name": "Smith",
-  "is_org_admin": true,
-  "active": true
-}
-```
-
-**Create Location (location.json):**
-```json
-{
-  "name": "Conference Room A",
-  "type": "room",
-  "code": "conf-room-a",
-  "description": "Main conference room with AV equipment",
-  "parent_id": "loc_floor_1"
+  "timestamp": "2025-01-15T10:30:00Z",
+  "sensor_id": "temp_001",
+  "location": "warehouse_a",
+  "readings": {
+    "temperature": 22.5,
+    "humidity": 45.2,
+    "pressure": 1013.25
+  },
+  "status": "ok"
 }
 ```
 
@@ -444,34 +443,22 @@ Flint provides comprehensive error handling with user-friendly messages:
 $ flint collections invalid_collection list
 Error: collection 'invalid_collection' not available in current context. Available collections: organizations, users, edges, things, locations, clients, edge_types, thing_types, location_types, edge_regions, audit_logs, topic_permissions
 
-# Record not found
-$ flint collections users get invalid_id
-Error: the requested resource was not found. It may have been deleted or you may not have access to it.
-Suggestion: verify the resource exists and that you have access to it.
-```
-
-### Authentication Errors
-```bash
-# Session expired
+# Authentication errors
 $ flint collections edges list
 Error: your session has expired. Please authenticate again using 'flint auth pb'.
-
-# Organization access denied
-$ flint collections organizations list
-Error: you don't have permission to access resources in this organization. Please verify your organization membership or contact your administrator.
 ```
 
-### Validation Errors
+### NATS Errors
 ```bash
-# Invalid JSON
-$ flint collections edges create 'invalid json'
-Error: invalid JSON format: invalid character 'i' looking for beginning of value
+# Connection errors
+$ flint nats publish test.subject "hello"
+Error: NATS connection error: no NATS servers are currently available.
+Suggestion: check your network connection and verify the NATS server URLs in your context
 
-# Missing required fields
-$ flint collections users create '{}'
-Error: validation failed:
-  - email address is required
-  - password is required
+# Authentication errors
+$ flint nats subscribe "test.>"
+Error: NATS authentication error: NATS authentication failed.
+Suggestion: verify your credentials are correct and check your context configuration
 ```
 
 ## Architecture
@@ -481,82 +468,31 @@ flint/
 ├── cmd/                    # Cobra command definitions
 │   ├── root.go            # Root command setup
 │   ├── context/           # Context management commands
-│   ├── auth/              # Authentication commands
-│   └── collections/       # Collection CRUD operations
+│   ├── auth/              # Authentication commands (PocketBase & NATS)
+│   ├── collections/       # Collection CRUD operations
+│   └── nats/              # NATS messaging commands
 ├── internal/
 │   ├── config/            # Context and configuration management
 │   ├── pocketbase/        # PocketBase client and operations
+│   ├── nats/              # NATS client and operations
 │   ├── resolver/          # Partial command matching logic  
 │   └── utils/             # Shared utilities
 └── main.go               # Application entry point
 ```
 
-## Development Status
+## Future Features
 
-### Phase 1 Completion Checklist ✅
+The following features are planned for future development:
 
-- [x] Context management with organization support
-- [x] Configuration files properly managed
-- [x] Partial command matching working
-- [x] Organization selection functionality
-- [x] XDG-compliant directory structure
-- [x] Comprehensive error handling
-- [x] Stone-Age.io collection definitions
-- [x] Utility functions for output and validation
-
-### Phase 2 Completion Checklist ✅
-
-- [x] PocketBase HTTP client implementation
-- [x] Authentication system for multiple collections
-- [x] Session token management with expiration
-- [x] Organization validation via PocketBase API
-- [x] Error translation from PocketBase responses
-- [x] Interactive and non-interactive authentication
-- [x] Comprehensive error handling with suggestions
-- [x] Integration with existing context system
-
-### Phase 3 Completion Checklist ✅
-
-- [x] CRUD operations for all Stone-Age.io collections
-- [x] Organization-scoped operations working
-- [x] Collection validation against context configuration
-- [x] Action partial matching (list, get, create, update, delete)
-- [x] JSON input support with file loading
-- [x] Basic JSON validation before PocketBase calls
-- [x] Filtering, pagination, and multiple output formats
-- [x] Collection-specific validation and field handling
-- [x] Rich table output with collection-aware formatting
-- [x] Comprehensive error handling with actionable suggestions
-- [x] Delete confirmations with record details and warnings
-
-### Context Structure Updates Checklist ✅
-
-- [x] Updated configuration manager for directory-based contexts
-- [x] Each context stored in its own directory (e.g., ~/.config/flint/production/)
-- [x] Context configuration stored as context.yaml within each directory
-- [x] NATS credentials files stored within context directories
-- [x] Relative path support for context-specific files
-- [x] Updated all context commands (create, list, select, show, delete, organization)
-- [x] Enhanced context display with directory locations
-- [x] Improved context deletion to remove entire directories
-- [x] Updated documentation to reflect new structure
-
-### Next Steps (Phase 4) - NATS Integration 
-
-- [ ] NATS client integration with multiple auth methods
-- [ ] NATS publish/subscribe operations  
-- [ ] Real-time message streaming to stdout
-- [ ] Connection management and error handling
-- [ ] Integration with Stone-Age.io topic structure
-
-### Phase 5 (Future) - File Operations & Final Polish
-
-- [ ] Generic file operations for any collection field
-- [ ] File upload/download with progress indicators
-- [ ] Comprehensive testing suite
-- [ ] Complete documentation and usage examples
-- [ ] Automated builds and GitHub Actions
-- [ ] Version information and update checking
+### File Operations & Final Polish
+- **Generic file operations** for uploading and downloading files from any collection field
+- **Progress indicators** for large file transfers with resumable uploads
+- **File validation** and type checking before upload operations
+- **Comprehensive testing suite** with unit and integration tests
+- **Complete documentation** with advanced usage examples and best practices
+- **Automated builds and releases** with GitHub Actions and cross-platform binaries
+- **Version management** with update notifications and automatic updates
+- **Enhanced CLI experience** with shell completion and improved help system
 
 ## Contributing
 
@@ -568,7 +504,3 @@ flint/
 6. Ensure proper error handling with user-friendly messages
 7. Validate all JSON inputs and provide helpful error messages
 8. Maintain consistent error message formatting
-
-## License
-
-[Add your license here]
