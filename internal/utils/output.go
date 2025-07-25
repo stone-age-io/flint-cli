@@ -201,3 +201,23 @@ func TitleCase(s string) string {
 	}
 	return strings.ToUpper(s[:1]) + s[1:]
 }
+
+// ToJSON converts data to JSON bytes (helper for NATS operations)
+func ToJSON(data interface{}) ([]byte, error) {
+	return json.Marshal(data)
+}
+
+// FormatJSON formats JSON bytes for pretty printing
+func FormatJSON(data []byte) (string, error) {
+	var obj interface{}
+	if err := json.Unmarshal(data, &obj); err != nil {
+		return "", err
+	}
+	
+	formatted, err := json.MarshalIndent(obj, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	
+	return string(formatted), nil
+}

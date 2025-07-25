@@ -121,7 +121,7 @@ func ValidateEmail(email string) error {
 	return nil
 }
 
-// ValidateNATSSubject validates a NATS subject pattern
+// ValidateNATSSubject validates a NATS subject pattern (basic validation only)
 func ValidateNATSSubject(subject string) error {
 	if subject == "" {
 		return fmt.Errorf("NATS subject cannot be empty")
@@ -131,6 +131,122 @@ func ValidateNATSSubject(subject string) error {
 	validSubject := regexp.MustCompile(`^[a-zA-Z0-9.*>_-]+$`)
 	if !validSubject.MatchString(subject) {
 		return fmt.Errorf("invalid NATS subject format. Use letters, numbers, dots, and wildcards (*, >)")
+	}
+
+	return nil
+}
+
+// ValidateNATSServers validates NATS server URLs
+func ValidateNATSServers(servers []string) error {
+	if len(servers) == 0 {
+		return fmt.Errorf("at least one NATS server is required")
+	}
+
+	for i, server := range servers {
+		if err := ValidateNATSServerURL(server); err != nil {
+			return fmt.Errorf("invalid NATS server %d: %w", i+1, err)
+		}
+	}
+
+	return nil
+}
+
+// ValidateNATSServerURL validates a single NATS server URL
+func ValidateNATSServerURL(serverURL string) error {
+	if serverURL == "" {
+		return fmt.Errorf("NATS server URL cannot be empty")
+	}
+
+	// Parse the URL to validate format
+	if err := ValidateURL(serverURL); err != nil {
+		return fmt.Errorf("invalid NATS server URL format: %w", err)
+	}
+
+	// Check for supported NATS schemes
+	if !strings.HasPrefix(serverURL, "nats://") && 
+	   !strings.HasPrefix(serverURL, "tls://") &&
+	   !strings.HasPrefix(serverURL, "ws://") &&
+	   !strings.HasPrefix(serverURL, "wss://") {
+		return fmt.Errorf("NATS server URL must use nats://, tls://, ws://, or wss:// scheme")
+	}
+
+	return nil
+}
+
+// ValidateNATSMessage validates message data and headers
+func ValidateNATSMessage(data []byte, headers map[string]string) error {
+	// Check message size (NATS has a default max of 1MB)
+	maxMessageSize := 1024 * 1024 // 1MB
+	if len(data) > maxMessageSize {
+		return fmt.Errorf("message size %d bytes exceeds maximum allowed size of %d bytes", 
+			len(data), maxMessageSize)
+	}
+
+	// Validate headers if present
+	if headers != nil {
+		for key, value := range headers {
+			if err := ValidateNATSHeaderField(key, value); err != nil {
+				return fmt.Errorf("invalid header '%s': %w", key, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// ValidateNATSHeaderField validates a NATS message header field
+func ValidateNATSHeaderField(key, value string) error {
+	if key == "" {
+		return fmt.Errorf("header key cannot be empty")
+	}
+
+	// NATS header keys should be valid HTTP header names
+	validHeaderKey := regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9\-_]*$`)
+	if !validHeaderKey.MatchString(key) {
+		return fmt.Errorf("header key must contain only letters, numbers, hyphens, and underscores")
+	}
+
+	// Check for reasonable header value length
+	if len(value) > 4096 { // 4KB limit per header value
+		return fmt.Errorf("header value exceeds maximum length of 4096 characters")
+	}
+
+	return nil
+}
+
+// ValidateNATSQueue validates a NATS queue group name
+func ValidateNATSQueue(queue string) error {
+	if queue == "" {
+		return nil // Queue is optional
+	}
+
+	// Queue names should be simple identifiers
+	validQueue := regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_-]*$`)
+	if !validQueue.MatchString(queue) {
+		return fmt.Errorf("queue name must start with letter/number and contain only letters, numbers, hyphens, and underscores")
+	}
+
+	if len(queue) > 64 {
+		return fmt.Errorf("queue name must be 64 characters or less")
+	}
+
+	return nil
+}
+
+// ValidateNATSCredentialsFile validates that a credentials file path is reasonable
+func ValidateNATSCredentialsFile(credsPath string) error {
+	if credsPath == "" {
+		return fmt.Errorf("credentials file path cannot be empty")
+	}
+
+	// Basic path validation (file existence will be checked by NATS client)
+	if err := ValidateFileExists(credsPath); err != nil {
+		return fmt.Errorf("invalid credentials file path: %w", err)
+	}
+
+	// Check file extension
+	if !strings.HasSuffix(credsPath, ".creds") {
+		return fmt.Errorf("credentials file should have .creds extension")
 	}
 
 	return nil

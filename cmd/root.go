@@ -9,6 +9,7 @@ import (
 	"flint-cli/cmd/auth"
 	"flint-cli/cmd/collections"
 	"flint-cli/cmd/context"
+	"flint-cli/cmd/nats"
 	"flint-cli/internal/config"
 	"flint-cli/internal/resolver"
 )
@@ -49,6 +50,7 @@ Features:
 		auth.SetConfigManager(configManager)
 		collections.SetConfigManager(configManager)
 		collections.SetCommandResolver(cmdResolver)
+		nats.SetConfigManager(configManager)
 
 		return nil
 	},
@@ -87,6 +89,9 @@ func addCommands() {
 	
 	// Collections CRUD commands
 	rootCmd.AddCommand(collections.CollectionsCmd)
+	
+	// NATS messaging commands
+	rootCmd.AddCommand(nats.NATSCmd)
 }
 
 // initConfig reads in config file and ENV variables if set.
